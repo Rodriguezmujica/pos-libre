@@ -1,0 +1,178 @@
+.container {
+    background-color: transparent;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.searchBar {
+    background-color: white;
+    padding: var(--spacing-md);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    background-color: #f3f6fb;
+    /* Light blueish background from screenshot */
+}
+
+.inputWrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    color: var(--color-text-secondary);
+}
+
+.scanIcon {
+    opacity: 0.5;
+}
+
+.input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: var(--font-size-md);
+    outline: none;
+    color: var(--color-text-primary);
+}
+
+.input::placeholder {
+    color: #9aa0a6;
+}
+
+.searchIcon {
+    opacity: 0.5;
+}
+
+.resultsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 var(--spacing-sm);
+}
+
+.headerTitle {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-bold);
+    color: #9aa0a6;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.matchCount {
+    font-size: 0.75rem;
+    color: #9aa0a6;
+}
+
+.productList {
+    background-color: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.tableHeader {
+    display: flex;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background-color: #f8f9fa;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-bold);
+    color: #9aa0a6;
+    text-transform: uppercase;
+}
+
+.colProduct {
+    flex: 2.5;
+}
+
+.colLocation {
+    flex: 1.5;
+    color: #5f6368;
+    font-size: 0.85rem;
+}
+
+.colCategory {
+    flex: 1;
+    text-align: center;
+}
+
+.colPrice {
+    flex: 1;
+    text-align: right;
+}
+
+.colStock {
+    flex: 1;
+    text-align: right;
+}
+
+.colActions {
+    flex: 0.5;
+    display: flex;
+    justify-content: center;
+}
+
+.actionButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #5f6368;
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.actionButton:hover {
+    background-color: rgba(26, 115, 232, 0.1);
+    color: #1a73e8;
+}
+
+.locationText {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.listItems {
+    display: flex;
+    flex-direction: column;
+}
+
+.productRow {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.productRow:last-child {
+    border-bottom: none;
+}
+
+.productRow:hover {
+    background-color: var(--color-secondary);
+}
+
+.productName {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+}
+
+.categoryBadge {
+    background-color: #e8eaed;
+    color: #5f6368;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: var(--font-weight-bold);
+}
+
+.stockCount {
+    color: #1a73e8;
+    /* Blue for stock */
+}

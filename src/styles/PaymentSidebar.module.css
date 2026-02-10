@@ -1,0 +1,153 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: var(--spacing-lg);
+}
+
+.title {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-bold);
+    color: #9aa0a6;
+    text-transform: uppercase;
+    margin-bottom: var(--spacing-sm);
+    letter-spacing: 0.5px;
+}
+
+.paymentMethods {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.paymentCard {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-md);
+    background-color: white;
+    border-radius: var(--radius-lg);
+    border: 2px solid transparent;
+    width: 100%;
+    text-align: left;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-sm);
+}
+
+.paymentCard:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.selected {
+    border-color: var(--color-primary);
+    background-color: #f8fbff;
+    /* Very subtle blue bg for selected */
+}
+
+.paymentIconWrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-right: var(--spacing-md);
+}
+
+.paymentName {
+    font-weight: var(--font-weight-bold);
+    font-size: 1rem;
+    color: var(--color-text-primary);
+    flex: 1;
+}
+
+.checkIcon {
+    color: var(--color-primary);
+}
+
+.chevronIcon {
+    color: var(--color-text-secondary);
+    font-size: 1.5rem;
+    line-height: 1;
+    color: #dadce0;
+}
+
+.spacer {
+    flex: 1;
+}
+
+/* Complete Sale Button */
+.completeSaleBtn {
+    background-color: var(--color-primary);
+    color: white;
+    width: 100%;
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+    box-shadow: 0 4px 6px rgba(26, 115, 232, 0.3);
+}
+
+.completeSaleBtn:hover {
+    background-color: var(--color-primary-hover);
+    transform: translateY(-1px);
+}
+
+.completeSaleBtn:active {
+    transform: translateY(0);
+}
+
+.completeSaleText {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-bold);
+    margin-bottom: 4px;
+}
+
+.completeSaleSubtext {
+    font-size: 0.7rem;
+    opacity: 0.8;
+    letter-spacing: 0.5px;
+}
+
+/* Actions Grid */
+.actionsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+}
+
+.actionBtn {
+    background-color: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    color: var(--color-text-primary);
+    font-weight: var(--font-weight-bold);
+    font-size: 0.7rem;
+    height: 80px;
+    transition: all 0.2s;
+}
+
+.actionBtn:hover {
+    background-color: #f8f9fa;
+    border-color: #dadce0;
+}
+
+.logoutBtn {
+    color: var(--color-danger);
+    border-color: #fad2cf;
+}
+
+.logoutBtn:hover {
+    background-color: #fce8e6;
+    border-color: #f6aea9;
+}

@@ -1,0 +1,686 @@
+.container {
+    display: flex;
+    height: 100vh;
+    background-color: #f8f9fa;
+    overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 260px;
+    background: white;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 0;
+}
+
+.logoArea {
+    padding: 0 24px 32px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logoIcon {
+    background: #1a73e8;
+    color: white;
+    padding: 8px;
+    border-radius: 8px;
+}
+
+.appTitle {
+    line-height: 1.2;
+}
+
+.appTitle h2 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #202124;
+    margin: 0;
+}
+
+.appTitle span {
+    font-size: 10px;
+    color: #5f6368;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.menu {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 12px;
+}
+
+.menuItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: #5f6368;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.menuItem:hover {
+    background: #f1f3f4;
+}
+
+.menuItem.active {
+    background: #e8f0fe;
+    color: #1a73e8;
+}
+
+.sidebarFooter {
+    padding: 24px;
+    border-top: 1px solid #f1f3f4;
+}
+
+.adminUser {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.adminAvatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    background: #fce8e6;
+    /* Placeholder color */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.adminInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.adminName {
+    font-size: 14px;
+    font-weight: 600;
+    color: #202124;
+}
+
+.adminEmail {
+    font-size: 12px;
+    color: #5f6368;
+}
+
+/* Main Content */
+.mainContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.header {
+    background: white;
+    padding: 16px 32px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.breadcrumbs {
+    font-size: 11px;
+    font-weight: 700;
+    color: #1a73e8;
+    /* Default to blue based on image 'CONFIGURACIÓN CONSOLIDADA' */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Gray for first breadcrumb part */
+.breadcrumbsBase {
+    color: #9aa0a6;
+}
+
+.pageTitle h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #202124;
+    margin: 0 0 4px 0;
+}
+
+.pageSubtitle {
+    color: #5f6368;
+    font-size: 14px;
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+}
+
+.cancelBtn {
+    padding: 10px 16px;
+    background: white;
+    border: 1px solid #dadce0;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #3c4043;
+    cursor: pointer;
+}
+
+.saveBtn {
+    padding: 10px 24px;
+    background: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.scrollArea {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    /* Content vs Preview */
+    gap: 24px;
+    align-items: start;
+}
+
+/* Forms Section */
+.sectionCard {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.sectionTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: #202124;
+    margin: 0;
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.fullWidth {
+    grid-column: span 2;
+}
+
+.label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #5f6368;
+    /* Darker gray for labels in image */
+    margin-bottom: 8px;
+}
+
+.input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #dadce0;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #202124;
+    background: white;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #1a73e8;
+}
+
+/* Image Upload Mock */
+.logoUpload {
+    grid-column: span 2;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #f1f3f4;
+}
+
+.logoPlaceholder {
+    width: 64px;
+    height: 64px;
+    background: white;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #bdc1c6;
+}
+
+.uploadInfo h4 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    color: #202124;
+}
+
+.uploadInfo p {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    color: #5f6368;
+}
+
+.uploadLink {
+    font-size: 12px;
+    color: #1a73e8;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* User List Table Style */
+.userList {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.userHeader {
+    font-size: 11px;
+    font-weight: 700;
+    color: #9aa0a6;
+    text-transform: uppercase;
+    text-align: left;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.userRow td {
+    padding: 16px 0;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.userProfile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.userAvatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.userInfo h5 {
+    margin: 0;
+    font-size: 14px;
+    color: #202124;
+}
+
+.userInfo span {
+    font-size: 12px;
+    color: #5f6368;
+    display: block;
+}
+
+.roleBadge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.roleAdmin {
+    background: #e8f0fe;
+    color: #1a73e8;
+}
+
+.roleCashier {
+    background: #f1f3f4;
+    color: #5f6368;
+}
+
+.actionIcons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    color: #9aa0a6;
+}
+
+.addUserBtn {
+    background: #e8f0fe;
+    color: #1a73e8;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Toggle Switch Mock */
+.toggleRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.toggleLabel {
+    font-size: 14px;
+    color: #202124;
+    font-weight: 500;
+}
+
+.toggleSwitch {
+    width: 40px;
+    height: 24px;
+    background: #e0e0e0;
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.toggleSwitch.checked {
+    background: #1a73e8;
+}
+
+.toggleHandle {
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.toggleSwitch.checked .toggleHandle {
+    transform: translateX(16px);
+}
+
+/* Ticket Preview */
+.ticketPreviewContainer {
+    position: sticky;
+    top: 0;
+}
+
+.previewCard {
+    background: #f8f9fa;
+    /* Light gray Background for preview container */
+    padding: 24px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    border: 1px solid #f1f3f4;
+}
+
+.ticket {
+    background: white;
+    width: 100%;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    position: relative;
+}
+
+/* Serrated edge effect (simulated with CSS or just simple bottom border for now) */
+.ticket::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    right: 0;
+    height: 10px;
+    background: radial-gradient(circle, transparent 70%, white 75%) 0 -5px;
+    background-size: 10px 10px;
+}
+
+.ticketHeader {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.ticketBody {
+    margin-bottom: 16px;
+}
+
+.ticketRow {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.ticketDivider {
+    border-top: 1px dashed #ccc;
+    margin: 8px 0;
+}
+
+.ticketFooter {
+    text-align: center;
+    font-size: 10px;
+    color: #5f6368;
+    white-space: pre-line;
+}
+
+.backBtn {
+    background: transparent;
+    border: none;
+    color: #5f6368;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    font-size: 13px;
+    margin-bottom: 20px;
+    /* Space before sidebar starts properly */
+    padding-left: 16px;
+}
+
+.backBtn:hover {
+    color: #1a73e8;
+}
+
+/* Modal Styles */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+    padding: 24px;
+}
+
+.modalContent {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: popup 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: center center;
+}
+
+@keyframes popup {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.modalHeader {
+    padding: 20px 24px;
+    border-bottom: 1px solid #f1f3f4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+}
+
+.modalTitle {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #202124;
+}
+
+.closeBtn {
+    background: transparent;
+    border: none;
+    color: #5f6368;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.closeBtn:hover {
+    background: #f1f3f4;
+    color: #202124;
+}
+
+.modalBody {
+    padding: 24px;
+}
+
+.formGroup {
+    margin-bottom: 20px;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #3c4043;
+}
+
+.formGroup input {
+    height: 48px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 15px;
+    padding: 0 16px;
+    transition: border-color 0.2s;
+}
+
+.formGroup input:focus {
+    border-color: #1a73e8;
+}
+
+.roleSelector {
+    display: flex;
+    gap: 16px;
+}
+
+.roleOption {
+    flex: 1;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s;
+    background: white;
+}
+
+.roleOption:hover {
+    background: #f8f9fa;
+    border-color: #dadce0;
+}
+
+.roleOption.selected {
+    border-color: #1a73e8;
+    background: #e8f0fe;
+    color: #1a73e8;
+}
+
+.roleOption svg {
+    color: inherit;
+}
+
+.roleLabel {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.modalFooter {
+    padding: 20px 24px;
+    border-top: 1px solid #f1f3f4;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #f8f9fa;
+}
+
+.cancelBtn:hover,
+.saveBtn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    transition: all 0.2s;
+}
