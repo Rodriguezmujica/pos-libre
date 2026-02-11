@@ -1,30 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Store, User, Bell, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Store, User } from 'lucide-react';
 import styles from '../styles/TopBar.module.css';
+import NotificationBell from './NotificationBell';
 
-const TopBar = ({ storeName, user, onUserClick, inventory = [], settings }) => {
+const TopBar = ({ storeName, user, onUserClick, inventory = [], settings, onNotificationClick }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
-    const [showNotifications, setShowNotifications] = useState(false);
-    const notificationRef = useRef(null);
-
-    const minStock = settings?.system?.minStock || 5;
-    const lowStockItems = inventory.filter(item => item.stock <= minStock);
 
     useEffect(() => {
         const timer = setInterval(() => {
             setCurrentTime(new Date());
         }, 1000);
 
-        const handleClickOutside = (event) => {
-            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-                setShowNotifications(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
         return () => {
             clearInterval(timer);
-            document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
 
@@ -54,43 +42,15 @@ const TopBar = ({ storeName, user, onUserClick, inventory = [], settings }) => {
 
             <div className={styles.rightSection}>
                 {/* Notifications Area */}
-                <div className={styles.notificationArea} ref={notificationRef}>
-                    <div
-                        className={styles.notificationIcon}
-                        onClick={() => setShowNotifications(!showNotifications)}
-                    >
-                        <Bell size={20} />
-                        {lowStockItems.length > 0 && (
-                            <span className={styles.badge}>{lowStockItems.length}</span>
-                        )}
-                    </div>
-
-                    {showNotifications && (
-                        <div className={styles.dropdown}>
-                            <div className={styles.dropdownHeader}>
-                                <h3>Alertas de Stock</h3>
-                                <span className={styles.headerCount}>{lowStockItems.length} items</span>
-                            </div>
-                            <div className={styles.dropdownContent}>
-                                {lowStockItems.length === 0 ? (
-                                    <div className={styles.emptyState}>
-                                        Todo en orden. No hay stock bajo.
-                                    </div>
-                                ) : (
-                                    lowStockItems.map(item => (
-                                        <div key={item.id} className={styles.notificationItem}>
-                                            <AlertTriangle size={14} color="#d93025" />
-                                            <div className={styles.itemInfo}>
-                                                <span className={styles.itemName}>{item.name}</span>
-                                                <span className={styles.itemStock}>Stock: {item.stock}</span>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
+                <NotificationBell
+                    inventory={inventory}
+                    settings={settings}
+                    onNotificationClick={(item) => {
+                        if (user?.role === 'ADMIN') {
+                            onNotificationClick && onNotificationClick(item);
+                        }
+                    }}
+                />
 
                 <div className={styles.divider}></div>
 

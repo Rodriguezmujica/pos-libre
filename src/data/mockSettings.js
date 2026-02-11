@@ -33,5 +33,7 @@ export const users = [
 
 export const systemSettings = {
     lowStockAlert: true,
-    autoBackup: false
+    autoBackup: false,
+    minStock: 5,
+    taxRate: 19
 };

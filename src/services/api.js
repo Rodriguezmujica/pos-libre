@@ -106,6 +106,73 @@ export const api = {
         return response.json();
     },
 
+    voidSale: async (id, reason) => {
+        const response = await fetch(`${API_URL}/sales/${id}/void`, {
+            method: 'POST',
+            headers: await getHeaders(),
+            body: JSON.stringify({ reason })
+        });
+        const text = await response.text();
+        if (!response.ok) {
+            let errorMsg = 'Failed to void sale';
+            try {
+                if (text) {
+                    const error = JSON.parse(text);
+                    errorMsg = error.error || errorMsg;
+                }
+            } catch (_) {}
+            throw new Error(errorMsg);
+        }
+        return text ? JSON.parse(text) : {};
+    },
+
+    // Cash Session (Apertura/Cierre de Caja)
+    getCashSession: async () => {
+        const response = await fetch(`${API_URL}/cash-session/current`, { headers: getHeaders() });
+        if (response.status === 404) {
+            // Backend sin ruta de cash-session o caja no abierta: tratar como sin sesión
+            return { isOpen: false, session: null };
+        }
+        if (!response.ok) throw new Error('Failed to fetch cash session');
+        return response.json();
+    },
+
+    openCashSession: async (initialAmount) => {
+        const response = await fetch(`${API_URL}/cash-session/open`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ initialAmount })
+        });
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || 'Error al abrir caja');
+        }
+        return response.json();
+    },
+
+    updateCashSession: async (expectedCash, expectedCard) => {
+        const response = await fetch(`${API_URL}/cash-session/current`, {
+            method: 'PATCH',
+            headers: getHeaders(),
+            body: JSON.stringify({ expectedCash, expectedCard })
+        });
+        if (!response.ok) throw new Error('Error al actualizar sesión');
+        return response.json();
+    },
+
+    closeCashSession: async (payload) => {
+        const response = await fetch(`${API_URL}/cash-session/close`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || 'Error al cerrar caja');
+        }
+        return response.json();
+    },
+
     // Settings
     getSettings: async () => {
         const response = await fetch(`${API_URL}/settings`, { headers: getHeaders() });

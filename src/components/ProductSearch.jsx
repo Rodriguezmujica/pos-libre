@@ -2,14 +2,44 @@ import React, { useState } from 'react';
 import { Search, ScanBarcode, Eye } from 'lucide-react';
 import styles from '../styles/ProductSearch.module.css';
 import ImagePreviewModal from './ImagePreviewModal';
+import VariantSelector from './VariantSelector';
 
 const ProductSearch = ({ onAddToCart, products = [] }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedImage, setSelectedImage] = useState(null);
+    const [variantModalOpen, setVariantModalOpen] = useState(false);
+    const [selectedProductForVariants, setSelectedProductForVariants] = useState(null);
 
     const filteredProducts = products.filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const handleProductClick = (product) => {
+        if (product.variants && product.variants.length > 0) {
+            setSelectedProductForVariants(product);
+            setVariantModalOpen(true);
+        } else {
+            onAddToCart && onAddToCart(product);
+        }
+    };
+
+    const handleVariantSelect = (variant) => {
+        if (!selectedProductForVariants) return;
+
+        // Construct a cart-ready item
+        const itemToAdd = {
+            id: variant.id, // Use variant ID (must be unique)
+            name: `${selectedProductForVariants.name} (${variant.name})`,
+            price: variant.price || selectedProductForVariants.price,
+            stock: variant.stock,
+            image: variant.image || selectedProductForVariants.image
+            // We lose the parent category/location if we don't copy it, but usually not critical for cart
+        };
+
+        onAddToCart && onAddToCart(itemToAdd);
+        setVariantModalOpen(false);
+        setSelectedProductForVariants(null);
+    };
 
     const handleImageClick = (e, product) => {
         e.stopPropagation();
@@ -61,10 +91,15 @@ const ProductSearch = ({ onAddToCart, products = [] }) => {
                         <div
                             key={product.id}
                             className={styles.productRow}
-                            onClick={() => onAddToCart && onAddToCart(product)}
+                            onClick={() => handleProductClick(product)}
                         >
                             <div className={styles.colProduct}>
                                 <span className={styles.productName}>{product.name}</span>
+                                {product.variants && product.variants.length > 0 && (
+                                    <span style={{ fontSize: '10px', background: '#e8f0fe', color: '#1a73e8', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px' }}>
+                                        {product.variants.length} opciones
+                                    </span>
+                                )}
                             </div>
                             <div className={styles.colLocation}>
                                 <span className={styles.locationText}>{product.location}</span>
@@ -73,10 +108,15 @@ const ProductSearch = ({ onAddToCart, products = [] }) => {
                                 <span className={styles.categoryBadge}>{product.category}</span>
                             </div>
                             <div className={styles.colPrice}>
-                                ${product.price.toFixed(2)}
+                                ${product.price.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
                             </div>
                             <div className={styles.colStock}>
-                                <span className={styles.stockCount}>{product.stock} en Stock</span>
+                                <span className={styles.stockCount}>
+                                    {product.variants
+                                        ? product.variants.reduce((acc, v) => acc + v.stock, 0) // Sum variant stock for display
+                                        : product.stock
+                                    } en Stock
+                                </span>
                             </div>
                             <div className={styles.colActions}>
                                 {product.image && (
@@ -99,6 +139,13 @@ const ProductSearch = ({ onAddToCart, products = [] }) => {
                 onClose={() => setSelectedImage(null)}
                 imageUrl={selectedImage?.url}
                 altText={selectedImage?.alt}
+            />
+
+            <VariantSelector
+                isOpen={variantModalOpen}
+                onClose={() => setVariantModalOpen(false)}
+                product={selectedProductForVariants}
+                onSelectVariant={handleVariantSelect}
             />
         </div>
     );

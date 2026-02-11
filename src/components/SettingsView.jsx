@@ -257,15 +257,28 @@ const SettingsView = ({ onBack, settings, onUpdateSettings, onCreateUser, onDele
                                     <div className={styles.toggleHandle}></div>
                                 </div>
                             </div>
-                            <div style={{ marginTop: 16 }}>
-                                <label className={styles.label}>STOCK MÍNIMO GLOBAL</label>
-                                <input
-                                    type="number"
-                                    className={styles.input}
-                                    value={settings.system.minStock}
-                                    onChange={(e) => handleChange('system', 'minStock', parseInt(e.target.value) || 0)}
-                                    style={{ maxWidth: 100 }}
-                                />
+                            <div style={{ marginTop: 16, display: 'flex', gap: '20px' }}>
+                                <div>
+                                    <label className={styles.label}>STOCK MÍNIMO GLOBAL</label>
+                                    <input
+                                        type="number"
+                                        className={styles.input}
+                                        value={settings.system.minStock}
+                                        onChange={(e) => handleChange('system', 'minStock', parseInt(e.target.value) || 0)}
+                                        style={{ maxWidth: 100 }}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={styles.label}>TASA DE IMPUESTO (%)</label>
+                                    <input
+                                        type="number"
+                                        className={styles.input}
+                                        value={settings.system.taxRate !== undefined ? settings.system.taxRate : 19}
+                                        onChange={(e) => handleChange('system', 'taxRate', parseFloat(e.target.value) || 0)}
+                                        style={{ maxWidth: 100 }}
+                                        placeholder="0"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -328,7 +341,7 @@ const SettingsView = ({ onBack, settings, onUpdateSettings, onCreateUser, onDele
                                         </div>
                                         {settings.ticket.showTaxBreakdown && (
                                             <div className={styles.ticketRow}>
-                                                <span>IVA (19%):</span>
+                                                <span>IVA ({settings.system.taxRate || 0}%):</span>
                                                 <span>$4.708</span>
                                             </div>
                                         )}

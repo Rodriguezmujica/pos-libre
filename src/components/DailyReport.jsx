@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
-import { Printer, Calendar, ArrowLeft, CreditCard, Banknote, User, RotateCcw } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Printer, Calendar, ArrowLeft, CreditCard, Banknote, User, RotateCcw, X, Search } from 'lucide-react';
 import styles from '../styles/DailyReport.module.css';
 import { dailyStats, transactions, currentTicket } from '../data/mockReportData';
 
-const DailyReport = ({ onBack, sales = [] }) => {
-    const [filterType, setFilterType] = useState('today'); // 'today' | 'month'
+const DailyReport = ({ onBack, sales = [], user, onVoidSale }) => {
+    const [filterType, setFilterType] = useState('today'); // 'today' | 'month' | 'custom'
     const [selectedId, setSelectedId] = useState(null);
+
+    // Custom date range state
+    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Filtrar ventas
     const getFilteredSales = () => {
@@ -16,11 +21,29 @@ const DailyReport = ({ onBack, sales = [] }) => {
 
         return sales.filter(sale => {
             const saleDate = new Date(sale.date);
+
+            // Text search filter
+            if (searchTerm) {
+                const searchLower = searchTerm.toLowerCase();
+                const idMatch = sale.id.toLowerCase().includes(searchLower);
+                if (!idMatch) return false;
+            }
+
             if (filterType === 'today') {
                 return saleDate.toLocaleDateString() === today;
-            } else {
+            } else if (filterType === 'month') {
                 return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+            } else if (filterType === 'custom') {
+                // Fix timezone issue by parsing parts manually
+                const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+                const start = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
+
+                const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+                const end = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
+
+                return saleDate >= start && saleDate <= end;
             }
+            return true;
         }).sort((a, b) => new Date(b.date) - new Date(a.date)); // Ordenar por fecha descendente
     };
 
@@ -30,21 +53,114 @@ const DailyReport = ({ onBack, sales = [] }) => {
     React.useEffect(() => {
         if (!selectedId && filteredSales.length > 0) {
             setSelectedId(filteredSales[0].id);
+        } else if (filteredSales.length === 0) {
+            setSelectedId(null);
         }
     }, [filteredSales, selectedId]);
 
-    const currentTicket = filteredSales.find(s => s.id === selectedId) || null;
+    const currentTicket = sales.find(s => s.id === selectedId) || null;
 
-    // Calcular KPIs
-    const totalSales = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
-    const cashSales = filteredSales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
-    const cardSales = filteredSales.filter(s => ['debit', 'credit'].includes(s.paymentMethod)).reduce((sum, s) => sum + s.total, 0);
+    // Calcular KPIs (Excluyendo anuladas)
+    const validSales = filteredSales.filter(s => s.status !== 'VOIDED');
+    const totalSales = validSales.reduce((sum, sale) => sum + sale.total, 0);
+    const cashSales = validSales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+    const cardSales = validSales.filter(s => ['debit', 'credit'].includes(s.paymentMethod)).reduce((sum, s) => sum + s.total, 0);
 
     const cashPercentage = totalSales > 0 ? (cashSales / totalSales) * 100 : 0;
     const cardPercentage = totalSales > 0 ? (cardSales / totalSales) * 100 : 0;
 
+    const [isVoidModalOpen, setIsVoidModalOpen] = useState(false);
+    const [voidReason, setVoidReason] = useState('');
+
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const handleVoidClick = () => {
+        setVoidReason('');
+        setIsVoidModalOpen(true);
+    }
+
+    const confirmVoid = async () => {
+        if (!voidReason) return alert("Debe ingresar un motivo");
+        await onVoidSale(currentTicket.id, voidReason);
+        setIsVoidModalOpen(false);
+    };
+
     return (
         <div className={styles.container}>
+            {/* Void Modal */}
+            {isVoidModalOpen && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000
+                }}>
+                    <div style={{ background: 'white', padding: 24, borderRadius: 8, width: 400 }}>
+                        <h3 style={{ marginTop: 0 }}>Anular Venta {currentTicket?.id}</h3>
+                        <p style={{ color: '#d93025' }}>Esta acción devolverá el stock al inventario. El monto no se sumará a los totales.</p>
+                        <textarea
+                            style={{ width: '100%', height: 80, marginTop: 10, padding: 8 }}
+                            placeholder="Motivo de anulación (obligatorio)..."
+                            value={voidReason}
+                            onChange={(e) => setVoidReason(e.target.value)}
+                        />
+                        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                            <button onClick={() => setIsVoidModalOpen(false)}>Cancelar</button>
+                            <button onClick={confirmVoid} style={{ background: '#d93025', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 4 }}>Confirmar Anulación</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Printable Ticket (modified for void) */}
+            {currentTicket && (
+                <div className={styles.printableTicket}>
+                    {/* ... existing print structure ... */}
+                    {currentTicket.status === 'VOIDED' && <h1 style={{ color: 'red', textAlign: 'center', border: '2px solid red' }}>ANULADA</h1>}
+                    <div className={styles.printHeader}>
+                        <h3>TECNIWORLD</h3>
+                        <p>RUT: 76.123.456-K</p>
+                        <p>Av. Providencia 1234, Santiago</p>
+                        <p>Tel: +56 9 8765 4321</p>
+                    </div>
+                    <div className={styles.printDivider}></div>
+                    <div className={styles.printInfo}>
+                        <p>Boleta: {currentTicket.id}</p>
+                        <p>Fecha: {new Date(currentTicket.date).toLocaleString()}</p>
+                        <p>Atendido por: {currentTicket.cashier}</p>
+                    </div>
+                    <div className={styles.printDivider}></div>
+                    <div className={styles.printItems}>
+                        {(currentTicket.items || []).map((item, index) => (
+                            <div key={index} className={styles.printItemRow}>
+                                <div className={styles.printItemName}>{item.quantity} x {item.name}</div>
+                                <div className={styles.printItemTotal}>${item.subtotal.toLocaleString('es-CL')}</div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className={styles.printDivider}></div>
+                    <div className={styles.printTotals}>
+                        <div className={styles.printTotalRow}>
+                            <span>SUBTOTAL:</span>
+                            <span>${(currentTicket.subtotal || (currentTicket.total / 1.19)).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                        </div>
+                        <div className={styles.printTotalRow}>
+                            <span>IVA:</span>
+                            <span>${(currentTicket.tax || (currentTicket.total - (currentTicket.total / 1.19))).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                        </div>
+                        <div className={styles.printTotalRow} style={{ fontWeight: 'bold', fontSize: '1.2em', marginTop: '5px' }}>
+                            <span>TOTAL:</span>
+                            <span>${(currentTicket.total || 0).toLocaleString('es-CL')}</span>
+                        </div>
+                    </div>
+                    <div className={styles.printDivider}></div>
+                    <div className={styles.printFooter}>
+                        <p>¡Gracias por su preferencia!</p>
+                        <p>Síguenos en @tecniworld</p>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className={styles.header}>
                 <div className={styles.titleSection}>
@@ -52,25 +168,49 @@ const DailyReport = ({ onBack, sales = [] }) => {
                     <span className={styles.subtitle}>Monitorea el rendimiento financiero de tu tienda en tiempo real.</span>
                 </div>
                 <div className={styles.controls}>
-                    <div className={styles.dateFilter}>
-                        <div className={styles.dateInput}>{new Date().toLocaleDateString()}</div>
-                        <div className={styles.filterBtn}><Calendar size={16} /></div>
+                    {/* Date Range Logic */}
+                    {filterType === 'custom' && (
+                        <div className={styles.customDateRange}>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className={styles.dateInputNative}
+                            />
+                            <span style={{ color: '#5f6368' }}>a</span>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className={styles.dateInputNative}
+                            />
+                        </div>
+                    )}
+
+                    <div className={styles.filterGroup}>
+                        <button
+                            className={`${styles.filterBtn} ${filterType === 'today' ? styles.active : ''}`}
+                            onClick={() => setFilterType('today')}
+                        >
+                            Hoy
+                        </button>
+                        <button
+                            className={`${styles.filterBtn} ${filterType === 'month' ? styles.active : ''}`}
+                            onClick={() => setFilterType('month')}
+                        >
+                            Este Mes
+                        </button>
+                        <button
+                            className={`${styles.filterBtn} ${filterType === 'custom' ? styles.active : ''}`}
+                            onClick={() => setFilterType('custom')}
+                        >
+                            Rango
+                        </button>
                     </div>
-                    <button
-                        className={`${styles.filterBtn} ${filterType === 'today' ? styles.active : ''}`}
-                        onClick={() => setFilterType('today')}
-                    >
-                        Hoy
-                    </button>
-                    <button
-                        className={`${styles.filterBtn} ${filterType === 'month' ? styles.active : ''}`}
-                        onClick={() => setFilterType('month')}
-                    >
-                        Este Mes
-                    </button>
-                    <button className={styles.primaryBtn} onClick={() => window.print()}>
+
+                    <button className={styles.primaryBtn} onClick={handlePrint} disabled={!currentTicket}>
                         <Printer size={18} />
-                        Imprimir Reporte
+                        Imprimir Ticket
                     </button>
                     <button className={styles.backBtn} onClick={onBack}>
                         <ArrowLeft size={18} />
@@ -85,8 +225,9 @@ const DailyReport = ({ onBack, sales = [] }) => {
                 <div className={styles.card}>
                     <div className={styles.cardLabel}>Venta Total (CLP)</div>
                     <div className={styles.cardValue}>${totalSales.toLocaleString('es-CL', { minimumFractionDigits: 0 })}</div>
+                    {/* Mention excluding voided */}
                     <div className={`${styles.trend} ${styles.trendUp}`}>
-                        ↗ {filteredSales.length} transacciones
+                        ↗ {validSales.length} transacciones
                     </div>
                 </div>
 
@@ -119,39 +260,58 @@ const DailyReport = ({ onBack, sales = [] }) => {
 
                     <div className={styles.tableCard}>
                         <div className={styles.searchBar}>
+                            <Search size={18} className={styles.searchIcon} />
                             <input
                                 type="text"
-                                placeholder="Buscar boleta..."
+                                placeholder="Buscar nº boleta..."
                                 className={styles.searchInput}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
 
                         <div className={styles.tableHeader}>
                             <div>HORA</div>
                             <div>Nº BOLETA</div>
-                            <div>MÉTODO DE PAGO</div>
+                            <div>MÉTODO</div>
                             <div style={{ textAlign: 'right' }}>TOTAL</div>
                         </div>
 
                         <div className={styles.tableBody}>
                             {filteredSales.length === 0 ? (
-                                <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>No hay ventas registradas en este período.</div>
+                                <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>No hay ventas en este rango.</div>
                             ) : (
                                 filteredSales.map((tx) => (
                                     <div
                                         key={tx.id}
                                         className={`${styles.tableRow} ${selectedId === tx.id ? styles.active : ''}`}
                                         onClick={() => setSelectedId(tx.id)}
+                                        style={tx.status === 'VOIDED' ? { opacity: 0.6 } : {}}
                                     >
-                                        <div>{new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                                        <div className={styles.boletaId}>{tx.id.split('-')[1]}...</div>
-                                        <div>
-                                            <span className={`${styles.methodTag} ${tx.paymentMethod !== 'cash' ? styles.methodCard : styles.methodCash}`}>
-                                                {tx.paymentMethod !== 'cash' ? <CreditCard size={12} /> : <Banknote size={12} />}
-                                                {tx.paymentMethod === 'cash' ? 'Efectivo' : tx.paymentMethod === 'debit' ? 'Débito' : 'Crédito'}
-                                            </span>
+                                        <div style={tx.status === 'VOIDED' ? { textDecoration: 'line-through' } : {}}>
+                                            {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </div>
-                                        <div className={styles.amount}>${tx.total.toLocaleString('es-CL', { minimumFractionDigits: 0 })}</div>
+                                        <div className={styles.boletaId} style={tx.status === 'VOIDED' ? { textDecoration: 'line-through' } : {}}>
+                                            {tx.id.includes('-') ? tx.id.split('-')[1] : tx.id}
+                                        </div>
+                                        <div>
+                                            {tx.status === 'VOIDED' ? (
+                                                <span className={`${styles.methodTag}`} style={{ background: '#fce8e6', color: '#c5221f' }}>
+                                                    ANULADA
+                                                </span>
+                                            ) : (
+                                                <span className={`${styles.methodTag} ${tx.paymentMethod === 'cash' ? styles.methodCash : styles.methodCard}`}>
+                                                    {tx.paymentMethod === 'cash' ? <Banknote size={12} /> : <CreditCard size={12} />}
+                                                    {tx.paymentMethod === 'cash' ? 'Efectivo' : tx.paymentMethod === 'exchange' ? 'Cambio' : 'Tarjeta'}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className={styles.amount} style={{
+                                            textDecoration: tx.status === 'VOIDED' ? 'line-through' : 'none',
+                                            color: tx.status === 'VOIDED' ? '#d93025' : 'inherit'
+                                        }}>
+                                            ${tx.total.toLocaleString('es-CL', { minimumFractionDigits: 0 })}
+                                        </div>
                                     </div>
                                 ))
                             )}
@@ -168,7 +328,11 @@ const DailyReport = ({ onBack, sales = [] }) => {
                                     <h2>Boleta {currentTicket.id}</h2>
                                     <div className={styles.ticketTime}>{new Date(currentTicket.date).toLocaleString()}</div>
                                 </div>
-                                <span className={styles.statusBadge}>{currentTicket.status}</span>
+                                <span className={styles.statusBadge} style={
+                                    currentTicket.status === 'VOIDED' ? { background: '#fce8e6', color: '#c5221f' } : {}
+                                }>
+                                    {currentTicket.status === 'VOIDED' ? 'ANULADA' : (currentTicket.status || 'COMPLETADO')}
+                                </span>
                             </div>
 
                             <div className={styles.customerInfo}>
@@ -178,8 +342,17 @@ const DailyReport = ({ onBack, sales = [] }) => {
                                 <span className={styles.customerName}>{currentTicket.cashier}</span>
                             </div>
 
+                            {/* Void Details */}
+                            {currentTicket.status === 'VOIDED' && currentTicket.voidMetadata && (
+                                <div style={{ background: '#fce8e6', padding: 12, borderRadius: 8, margin: '12px 0', border: '1px solid #fad2cf' }}>
+                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#d93025', fontWeight: 'bold' }}>Anulada por: {currentTicket.voidMetadata.by}</p>
+                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', color: '#5f6368', fontStyle: 'italic' }}>"{currentTicket.voidMetadata.reason}"</p>
+                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#5f6368' }}>{new Date(currentTicket.voidMetadata.at).toLocaleString()}</p>
+                                </div>
+                            )}
+
                             {/* Items */}
-                            <div className={styles.ticketItems}>
+                            <div className={styles.ticketItems} style={currentTicket.status === 'VOIDED' ? { opacity: 0.5 } : {}}>
                                 <div className={styles.tableHeader} style={{ padding: '0 0 8px 0', background: 'transparent', borderBottom: '1px solid #f1f3f4', marginBottom: '16px', gridTemplateColumns: '3fr 1fr 1fr' }}>
                                     <div>PRODUCTO</div>
                                     <div style={{ textAlign: 'center' }}>CANT</div>
@@ -190,33 +363,51 @@ const DailyReport = ({ onBack, sales = [] }) => {
                                     <div key={index} className={styles.itemRow}>
                                         <div className={styles.itemInfo}>
                                             <span className={styles.itemName}>{item.name}</span>
-                                            <span className={styles.itemMeta}>${item.price.toLocaleString('es-CL')} unit.</span>
+                                            <span className={styles.itemMeta}>${item.price.toLocaleString('es-CL', { maximumFractionDigits: 0 })} unit.</span>
                                         </div>
                                         <div className={styles.itemQty}>{item.quantity}</div>
-                                        <div className={styles.itemTotal}>${item.subtotal.toLocaleString('es-CL')}</div>
+                                        <div className={styles.itemTotal}>${item.subtotal.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</div>
                                     </div>
                                 ))}
                             </div>
 
-                            <div className={styles.ticketSummary}>
+                            <div className={styles.ticketSummary} style={currentTicket.status === 'VOIDED' ? { opacity: 0.5 } : {}}>
                                 <div className={styles.summaryRow}>
                                     <span>Subtotal</span>
-                                    <span>${(currentTicket.subtotal || 0).toLocaleString('es-CL')}</span>
+                                    <span>${(currentTicket.subtotal || (currentTicket.total * (1 - 0.19))).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
                                 </div>
                                 <div className={styles.summaryRow}>
-                                    <span>IVA (16%)</span>
-                                    <span>${(currentTicket.tax || 0).toLocaleString('es-CL')}</span>
+                                    <span>IVA (Calculado)</span>
+                                    <span>${(currentTicket.tax || (currentTicket.total * 0.19)).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
                                 </div>
                                 <div className={styles.totalRow}>
                                     <span className={styles.totalLabel}>TOTAL</span>
-                                    <span className={styles.totalValue}>${(currentTicket.total || 0).toLocaleString('es-CL')}</span>
+                                    <span className={styles.totalValue} style={currentTicket.status === 'VOIDED' ? { textDecoration: 'line-through', color: '#d93025' } : {}}>
+                                        ${(currentTicket.total || 0).toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                                    </span>
                                 </div>
                             </div>
 
-                            <button className={styles.reprintBtn} onClick={() => window.print()}>
-                                <RotateCcw size={18} />
-                                Reimprimir
-                            </button>
+                            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                                <button className={styles.reprintBtn} onClick={handlePrint} style={{ flex: 1 }}>
+                                    <Printer size={18} />
+                                    Imprimir Ticket
+                                </button>
+                                {/* VOID BUTTON - Only if Active and Admin (assuming user prop is passed) */}
+                                {currentTicket.status !== 'VOIDED' && user?.role === 'ADMIN' && (
+                                    <button
+                                        onClick={handleVoidClick}
+                                        style={{
+                                            background: '#fce8e6', color: '#d93025', border: '1px solid #d93025',
+                                            borderRadius: 8, padding: '0 16px', fontWeight: 600, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', gap: 8
+                                        }}
+                                    >
+                                        <X size={18} />
+                                        ANULAR
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <div className={styles.ticketCard} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#888' }}>

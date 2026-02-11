@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Banknote, CreditCard, Smartphone, CheckCircle2, Box, FileText, Settings, LogOut, ArrowLeftRight } from 'lucide-react';
+import { Banknote, CreditCard, Smartphone, CheckCircle2, Box, FileText, Settings, LogOut, ArrowLeftRight, Lock } from 'lucide-react';
 import styles from '../styles/PaymentSidebar.module.css';
 
-const PaymentSidebar = ({ onShowReport, onShowInventory, onShowSettings, onCompleteSale, onLogout, user }) => {
+const PaymentSidebar = ({ onShowReport, onShowInventory, onShowSettings, onCompleteSale, onLogout, user, onCloseRegister }) => {
     const [selectedMethod, setSelectedMethod] = useState('debit');
 
     const paymentMethods = [
@@ -63,6 +63,10 @@ const PaymentSidebar = ({ onShowReport, onShowInventory, onShowSettings, onCompl
                         <span>AJUSTES</span>
                     </button>
                 )}
+                <button className={`${styles.actionBtn} ${styles.logoutBtn}`} onClick={onCloseRegister} style={{ backgroundColor: '#fce8e6', color: '#d93025' }}>
+                    <Lock size={20} />
+                    <span>CERRAR CAJA</span>
+                </button>
                 <button className={`${styles.actionBtn} ${styles.logoutBtn}`} onClick={onLogout}>
                     <LogOut size={20} />
                     <span>CERRAR SESIÓN</span>

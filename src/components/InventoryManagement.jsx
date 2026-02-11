@@ -1,23 +1,31 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-    Search, Bell, Settings, User, Filter, Download,
+    Search, Settings, User, Filter, Download,
     Box, Trash2, Plus, Save, ScanBarcode, Image as ImageIcon,
     ChevronLeft, ChevronRight, ArrowLeft, X
 } from 'lucide-react';
 import styles from '../styles/InventoryManagement.module.css';
 import { categories } from '../data/mockInventory';
 import SuccessModal from './SuccessModal';
+import ConfirmationModal from './SuccessModal'; // Reusing SuccessModal as a base for confirmation if possible, or use the dedicated one
+// Actually, let's use the new ConfirmationModal we created earlier for sales! 
+// But wait, that one is specific to Sales (has total, method). 
+// Let's stick to using SuccessModal for alerts and maybe create a generic confirm in App.jsx?
+// Or better, let's just add a local confirmation state here.
 
-const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings }) => {
-    const [selectedProduct, setSelectedProduct] = useState(inventory[0]);
+import NotificationBell from './NotificationBell';
+
+const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, onDeleteProduct, settings, targetProductId }) => {
+    const [selectedProduct, setSelectedProduct] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
 
     const minStock = settings?.system?.minStock || 5;
     const showLowStock = settings?.system?.lowStockAlert;
 
     // Estados locales para el formulario
     const [editName, setEditName] = useState('');
-    const [editCategory, setEditCategory] = useState('');
+    const [editCategory, setEditCategory] = useState(categories[0]);
     const [editPrice, setEditPrice] = useState('');
     const [editCost, setEditCost] = useState('');
     const [editStock, setEditStock] = useState('');
@@ -27,6 +35,10 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
     const [editImage, setEditImage] = useState(null); // URL or Base64
 
     const [modalState, setModalState] = useState({ isOpen: false, message: '', title: '', type: 'success' });
+    const [deleteId, setDeleteId] = useState(null); // ID of product to delete
+
+    const [editVariants, setEditVariants] = useState([]);
+    const [newVariant, setNewVariant] = useState({ name: '', stock: '', price: '' });
     const fileInputRef = useRef(null);
 
     const parseKeywords = (kw) => {
@@ -37,9 +49,29 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
         return [];
     };
 
-    // Actualizar formulario cuando cambia el producto seleccionado
-    React.useEffect(() => {
-        if (selectedProduct) {
+    const parseVariants = (v) => {
+        if (Array.isArray(v)) return v;
+        if (typeof v === 'string') {
+            try { return JSON.parse(v); } catch { return []; }
+        }
+        return [];
+    }
+
+    // Actualizar formulario cuando cambia el producto seleccionado o modo creación
+    useEffect(() => {
+        if (isCreating) {
+            setEditName('');
+            setEditCategory(categories[0]);
+            setEditPrice('');
+            setEditCost('');
+            setEditStock('');
+            setEditBarcode('');
+            setEditKeywords([]);
+            setEditVariants([]);
+            setEditLocation('');
+            setEditImage(null);
+            setNewVariant({ name: '', stock: '', price: '' });
+        } else if (selectedProduct) {
             setEditName(selectedProduct.name);
             setEditCategory(selectedProduct.category);
             setEditPrice(selectedProduct.price.toString());
@@ -47,26 +79,35 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
             setEditStock(selectedProduct.stock.toString());
             setEditBarcode(selectedProduct.barcode || '');
             setEditKeywords(parseKeywords(selectedProduct.keywords));
+            setEditVariants(parseVariants(selectedProduct.variants));
             setEditLocation(selectedProduct.location || '');
             setEditImage(selectedProduct.image || null);
+            setNewVariant({ name: '', stock: '', price: '' });
         }
-    }, [selectedProduct]);
+    }, [selectedProduct, isCreating]);
 
-    // Mantener seleccionado actualizado si el inventario cambia
-    React.useEffect(() => {
-        if (selectedProduct) {
-            const updated = inventory.find(p => p.id === selectedProduct.id);
-            if (updated) setSelectedProduct(updated);
-        } else if (inventory.length > 0) {
-            setSelectedProduct(inventory[0]);
-        }
-    }, [inventory]);
+    // ... (keep useEffect for fetching product)
 
-    const handleSave = () => {
-        if (!selectedProduct) return;
+    const handleAddVariant = () => {
+        if (!newVariant.name) return;
+        const variant = {
+            id: `v${Date.now()}`, // Temporary ID for frontend, backend/db logic might need to be consistent but this works for JSON storage
+            name: newVariant.name,
+            stock: parseInt(newVariant.stock) || 0,
+            price: newVariant.price ? parseFloat(newVariant.price) : (parseFloat(editPrice) || 0)
+        };
+        setEditVariants([...editVariants, variant]);
+        setNewVariant({ name: '', stock: '', price: '' });
+    };
 
-        const updatedProduct = {
-            ...selectedProduct,
+    const removeVariant = (index) => {
+        const updated = [...editVariants];
+        updated.splice(index, 1);
+        setEditVariants(updated);
+    };
+
+    const handleSave = async () => {
+        const productData = {
             name: editName,
             category: editCategory,
             price: parseFloat(editPrice) || 0,
@@ -74,27 +115,64 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
             stock: parseInt(editStock) || 0,
             barcode: editBarcode,
             keywords: editKeywords,
+            variants: editVariants,
             location: editLocation,
             image: editImage
         };
 
-        onUpdateProduct(updatedProduct);
-        setModalState({
-            isOpen: true,
-            title: 'Producto Actualizado',
-            message: `Los datos del producto "${editName}" se han guardado correctamente.`,
-            type: 'success'
-        });
+        // ... rest of handleSave
+
+
+        try {
+            if (isCreating) {
+                if (!editName) {
+                    setModalState({ isOpen: true, title: 'Error', message: 'El nombre es obligatorio', type: 'error' });
+                    return;
+                }
+                await onAddProduct(productData);
+                setModalState({
+                    isOpen: true,
+                    title: 'Producto Creado',
+                    message: `El producto "${editName}" se ha creado correctamente.`,
+                    type: 'success'
+                });
+                setIsCreating(false);
+            } else {
+                if (!selectedProduct) return;
+                await onUpdateProduct({ ...selectedProduct, ...productData });
+                setModalState({
+                    isOpen: true,
+                    title: 'Producto Actualizado',
+                    message: `Los datos del producto "${editName}" se han guardado correctamente.`,
+                    type: 'success'
+                });
+            }
+        } catch (error) {
+            setModalState({ isOpen: true, title: 'Error', message: 'Hubo un error al guardar.', type: 'error' });
+        }
+    };
+
+    const confirmDelete = (id) => {
+        setDeleteId(id);
+    };
+
+    const executeDelete = async () => {
+        if (!deleteId) return;
+        try {
+            await onDeleteProduct(deleteId);
+            setModalState({ isOpen: true, title: 'Eliminado', message: 'Producto eliminado correctamente', type: 'success' });
+            setDeleteId(null);
+            setSelectedProduct(null); // Clear selection
+        } catch (error) {
+            setModalState({ isOpen: true, title: 'Error', message: 'No se pudo eliminar el producto.', type: 'error' });
+        }
     };
 
     const handleAddKeyword = (e) => {
         if (e.key === 'Enter' && e.target.value.trim()) {
             e.preventDefault();
             const inputVal = e.target.value;
-            // Split by comma if present, otherwise just trim
             const newKeywords = inputVal.split(',').map(k => k.trim()).filter(k => k !== '');
-
-            // Add unique keywords
             const uniqueKeywords = newKeywords.filter(k => !editKeywords.includes(k));
 
             if (uniqueKeywords.length > 0) {
@@ -135,7 +213,7 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
 
     const filteredInventory = inventory.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.sku || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -148,6 +226,23 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
                 message={modalState.message}
                 type={modalState.type}
             />
+
+            {/* Delete Confirmation Modal (Custom simple implementation) */}
+            {deleteId && (
+                <div className={styles.modalOverlay} style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                }}>
+                    <div style={{ background: 'white', padding: 24, borderRadius: 8, maxWidth: 400, textAlign: 'center' }}>
+                        <h3 style={{ marginTop: 0 }}>¿Eliminar Producto?</h3>
+                        <p>Esta acción no se puede deshacer.</p>
+                        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
+                            <button onClick={() => setDeleteId(null)} style={{ padding: '8px 16px', border: '1px solid #ddd', background: 'white', borderRadius: 4, cursor: 'pointer' }}>Cancelar</button>
+                            <button onClick={executeDelete} style={{ padding: '8px 16px', border: 'none', background: '#d93025', color: 'white', borderRadius: 4, cursor: 'pointer' }}>Eliminar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Top Header */}
             <div className={styles.topHeader}>
@@ -170,14 +265,23 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
                 </div>
 
                 <div className={styles.headerActions}>
+                    <button
+                        className={styles.primaryBtn}
+                        onClick={() => { setIsCreating(true); setSelectedProduct(null); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#1a73e8', color: 'white', border: 'none', borderRadius: 4 }}
+                    >
+                        <Plus size={18} /> Nuevo Producto
+                    </button>
+                    <div style={{ width: 1, height: 24, background: '#dadce0', margin: '0 8px' }}></div>
                     <button className={styles.backBtn} onClick={onBack}>
                         <ArrowLeft size={18} />
                         Volver
                     </button>
-                    <div style={{ width: 1, height: 24, background: '#dadce0', margin: '0 8px' }}></div>
-                    <Bell size={20} style={{ cursor: 'pointer' }} />
-                    <Settings size={20} style={{ cursor: 'pointer' }} />
-                    <User size={20} style={{ cursor: 'pointer' }} />
+                    <NotificationBell
+                        inventory={inventory}
+                        settings={settings}
+                        onNotificationClick={(item) => setSelectedProduct(item)}
+                    />
                 </div>
             </div>
 
@@ -194,9 +298,7 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
                             <button className={styles.actionBtn}>
                                 <Filter size={16} /> Filtrar
                             </button>
-                            <button className={styles.actionBtn}>
-                                <Download size={16} /> Exportar
-                            </button>
+                            {/* Removed unused export button for now */}
                         </div>
                     </div>
 
@@ -213,11 +315,11 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
                             <div
                                 key={product.id}
                                 className={`${styles.tableRow} ${selectedProduct?.id === product.id ? styles.active : ''}`}
-                                onClick={() => setSelectedProduct(product)}
+                                onClick={() => { setSelectedProduct(product); setIsCreating(false); }}
                             >
                                 <div>
                                     <div className={styles.rowName}>{product.name}</div>
-                                    <span className={styles.rowSku}>SKU: {product.sku}</span>
+                                    <span className={styles.rowSku}>SKU: {product.sku || product.barcode || '-'}</span>
                                 </div>
                                 <div>
                                     <span className={`${styles.categoryBadge} ${getCategoryStyle(product.category)}`}>
@@ -234,7 +336,7 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
                                     {product.stock}
                                 </div>
                                 <div className={styles.price}>
-                                    ${product.price ? product.price.toLocaleString() : '0.00'}
+                                    ${product.price ? product.price.toLocaleString('es-CL', { maximumFractionDigits: 0 }) : '0'}
                                 </div>
                             </div>
                         ))}
@@ -248,13 +350,21 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
                 {/* Right Panel: Editor */}
                 <div className={styles.rightPanel}>
                     <div className={styles.editorHeader}>
-                        <h2 className={styles.listTitle}>Editor de Producto</h2>
-                        <button className={styles.actionBtn} style={{ border: 'none' }}>
-                            <Trash2 size={18} color="#9aa0a6" />
-                        </button>
+                        <h2 className={styles.listTitle}>
+                            {isCreating ? 'Nuevo Producto' : 'Editor de Producto'}
+                        </h2>
+                        {!isCreating && selectedProduct && (
+                            <button
+                                className={styles.actionBtn}
+                                style={{ border: 'none', color: '#d93025' }}
+                                onClick={() => confirmDelete(selectedProduct.id)}
+                            >
+                                <Trash2 size={18} />
+                            </button>
+                        )}
                     </div>
 
-                    {selectedProduct ? (
+                    {selectedProduct || isCreating ? (
                         <div className={styles.editorForm}>
                             <div className={styles.formGroup}>
                                 <label className={styles.label}>NOMBRE DEL PRODUCTO</label>
@@ -263,6 +373,7 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
                                     className={styles.input}
                                     value={editName}
                                     onChange={(e) => setEditName(e.target.value)}
+                                    placeholder="Ej: Cable USB-C a USB-C"
                                 />
                             </div>
 
@@ -285,6 +396,7 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
                                             className={styles.input}
                                             value={editBarcode}
                                             onChange={(e) => setEditBarcode(e.target.value)}
+                                            placeholder="Escanear o escribir..."
                                         />
                                         <ScanBarcode size={18} style={{ position: 'absolute', right: 10, top: 10, color: '#9aa0a6' }} />
                                     </div>
@@ -305,6 +417,77 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
                                         className={styles.inputGhost}
                                         onKeyDown={handleAddKeyword}
                                     />
+                                </div>
+                            </div>
+
+                            {/* Variants Section */}
+                            <div className={styles.formGroup} style={{ marginTop: 24, padding: 16, background: '#f8f9fa', borderRadius: 8 }}>
+                                <label className={styles.label} style={{ marginBottom: 12, display: 'block' }}>VARIANTES DEL PRODUCTO</label>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                                    {editVariants.map((v, i) => (
+                                        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'white', padding: 8, borderRadius: 4, border: '1px solid #dadce0' }}>
+                                            <div style={{ flex: 2, fontWeight: 500 }}>{v.name}</div>
+                                            <div style={{ width: 80, fontSize: 13 }}>Stock: {v.stock}</div>
+                                            <div style={{ width: 100, fontSize: 13, fontWeight: 'bold' }}>${v.price ? v.price.toLocaleString() : editPrice}</div>
+                                            <button
+                                                onClick={() => removeVariant(i)}
+                                                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#d93025' }}
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {editVariants.length === 0 && (
+                                        <div style={{ color: '#5f6368', fontSize: 13, fontStyle: 'italic' }}>No hay variantes (se usa stock general).</div>
+                                    )}
+                                </div>
+
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                                    <div style={{ flex: 2 }}>
+                                        <label style={{ fontSize: 11, color: '#5f6368', display: 'block', marginBottom: 4 }}>Nombre Variante</label>
+                                        <input
+                                            type="text"
+                                            className={styles.input}
+                                            style={{ fontSize: 13 }}
+                                            placeholder="Ej: Azul, XL..."
+                                            value={newVariant.name}
+                                            onChange={e => setNewVariant({ ...newVariant, name: e.target.value })}
+                                        />
+                                    </div>
+                                    <div style={{ width: 80 }}>
+                                        <label style={{ fontSize: 11, color: '#5f6368', display: 'block', marginBottom: 4 }}>Stock</label>
+                                        <input
+                                            type="number"
+                                            className={styles.input}
+                                            style={{ fontSize: 13 }}
+                                            placeholder="0"
+                                            value={newVariant.stock}
+                                            onChange={e => setNewVariant({ ...newVariant, stock: e.target.value })}
+                                        />
+                                    </div>
+                                    <div style={{ width: 100 }}>
+                                        <label style={{ fontSize: 11, color: '#5f6368', display: 'block', marginBottom: 4 }}>Precio</label>
+                                        <input
+                                            type="number"
+                                            className={styles.input}
+                                            style={{ fontSize: 13 }}
+                                            placeholder={editPrice || "0"}
+                                            value={newVariant.price}
+                                            onChange={e => setNewVariant({ ...newVariant, price: e.target.value })}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleAddVariant}
+                                        disabled={!newVariant.name}
+                                        style={{
+                                            height: 36, padding: '0 12px', background: newVariant.name ? '#1a73e8' : '#dadce0',
+                                            color: 'white', border: 'none', borderRadius: 4, cursor: newVariant.name ? 'pointer' : 'default',
+                                            display: 'flex', alignItems: 'center'
+                                        }}
+                                    >
+                                        <Plus size={18} />
+                                    </button>
                                 </div>
                             </div>
 
@@ -406,21 +589,17 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, settings
                             <div className={styles.footerActions}>
                                 <button className={styles.updateBtn} onClick={handleSave}>
                                     <Save size={18} />
-                                    Actualizar Producto
+                                    {isCreating ? 'Guardar Nuevo Producto' : 'Actualizar Producto'}
                                 </button>
-                                <div className={styles.secondaryActions}>
-                                    <button className={styles.secondaryBtn}>
-                                        <Plus size={18} /> Nuevo
-                                    </button>
-                                    <button className={`${styles.secondaryBtn} ${styles.dangerBtn}`}>
-                                        <Trash2 size={18} /> Eliminar
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     ) : (
                         <div style={{ textAlign: 'center', padding: 40, color: '#9aa0a6' }}>
-                            Selecciona un producto para editar
+                            <div style={{ marginBottom: 16 }}>
+                                <Box size={48} opacity={0.2} />
+                            </div>
+                            <h3>Administra tu Catálogo</h3>
+                            <p>Selecciona un producto para editar o crea uno nuevo desde el menú superior.</p>
                         </div>
                     )}
                 </div>

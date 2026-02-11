@@ -13,11 +13,24 @@ const db = new sqlite3.Database(dbPath, (err) => {
 });
 
 const seedData = [
-    { name: 'iPhone 15 Pro Max', price: 1199.00, cost: 950.00, stock: 12, category: 'CELULAR', barcode: '194253408456', min_stock: 5 },
-    { name: 'Sony Alpha A7 IV', price: 2499.00, cost: 2100.00, stock: 2, category: 'CÁMARA', barcode: '4548736133036', min_stock: 2 },
-    { name: 'MacBook Air M3', price: 1099.00, cost: 899.00, stock: 8, category: 'COMPUTACIÓN', barcode: '194253765123', min_stock: 5 },
-    { name: 'Logitech MX Master 3S', price: 99.00, cost: 65.00, stock: 45, category: 'ACCESORIOS', barcode: '097855169045', min_stock: 5 },
-    { name: 'Samsung T9 SSD 2TB', price: 239.00, cost: 180.00, stock: 18, category: 'ALMACENAMIENTO', barcode: '887276789012', min_stock: 5 }
+    {
+        name: 'iPhone 15 Pro Max',
+        price: 1200000,
+        cost: 950000,
+        stock: 12,
+        category: 'CELULAR',
+        barcode: '194253408456',
+        min_stock: 5,
+        variants: [
+            { id: 'v1-256-nat', name: '256GB - Titanio Natural', price: 1200000, stock: 4 },
+            { id: 'v1-256-blue', name: '256GB - Azul Titanio', price: 1200000, stock: 3 },
+            { id: 'v1-512-nat', name: '512GB - Titanio Natural', price: 1400000, stock: 5 }
+        ]
+    },
+    { name: 'Sony Alpha A7 IV', price: 2500000, cost: 2100000, stock: 2, category: 'CÁMARA', barcode: '4548736133036', min_stock: 2 },
+    { name: 'MacBook Air M3', price: 1100000, cost: 900000, stock: 8, category: 'COMPUTACIÓN', barcode: '194253765123', min_stock: 5 },
+    { name: 'Logitech MX Master 3S', price: 100000, cost: 65000, stock: 45, category: 'ACCESORIOS', barcode: '097855169045', min_stock: 5 },
+    { name: 'Samsung T9 SSD 2TB', price: 240000, cost: 180000, stock: 18, category: 'ALMACENAMIENTO', barcode: '887276789012', min_stock: 5 }
 ];
 
 const initializeDatabase = () => {
@@ -34,11 +47,12 @@ const initializeDatabase = () => {
             min_stock INTEGER DEFAULT 5,
             location TEXT,
             image TEXT,
-            keywords TEXT
+            keywords TEXT,
+            variants TEXT
         )`, (err) => {
             if (!err) {
                 // Migration: Add columns if they don't exist (for existing DBs)
-                const columnsToAdd = ['location', 'image', 'keywords'];
+                const columnsToAdd = ['location', 'image', 'keywords', 'variants'];
                 columnsToAdd.forEach(col => {
                     db.run(`ALTER TABLE products ADD COLUMN ${col} TEXT`, (err) => {
                         // Ignore error if column already exists
@@ -49,9 +63,9 @@ const initializeDatabase = () => {
                 db.get("SELECT count(*) as count FROM products", (err, row) => {
                     if (!err && row.count === 0) {
                         console.log("Seeding products...");
-                        const stmt = db.prepare("INSERT INTO products (name, price, cost, stock, category, barcode, min_stock, location, image, keywords) VALUES (?,?,?,?,?,?,?,?,?,?)");
+                        const stmt = db.prepare("INSERT INTO products (name, price, cost, stock, category, barcode, min_stock, location, image, keywords, variants) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
                         seedData.forEach(p => {
-                            stmt.run(p.name, p.price, p.cost, p.stock, p.category, p.barcode, p.min_stock, '', null, '[]');
+                            stmt.run(p.name, p.price, p.cost, p.stock, p.category, p.barcode, p.min_stock, '', null, '[]', p.variants ? JSON.stringify(p.variants) : null);
                         });
                         stmt.finalize();
                         console.log("Seeding completed.");
@@ -66,8 +80,21 @@ const initializeDatabase = () => {
             date TEXT NOT NULL,
             total REAL NOT NULL,
             payment_method TEXT,
-            cashier TEXT
-        )`);
+            cashier TEXT,
+            status TEXT DEFAULT 'COMPLETED',
+            void_reason TEXT,
+            voided_by TEXT,
+            voided_at TEXT
+        )`, (err) => {
+            if (!err) {
+                // Migration for Sales table
+                const salesCols = ['status', 'void_reason', 'voided_by', 'voided_at'];
+                salesCols.forEach(col => {
+                    const def = col === 'status' ? "TEXT DEFAULT 'COMPLETED'" : "TEXT";
+                    db.run(`ALTER TABLE sales ADD COLUMN ${col} ${def}`, (err) => { });
+                });
+            }
+        });
 
         // Sale Items Table
         db.run(`CREATE TABLE IF NOT EXISTS sale_items (
@@ -76,8 +103,28 @@ const initializeDatabase = () => {
             product_id INTEGER,
             quantity INTEGER NOT NULL,
             price REAL NOT NULL,
+            variant_id TEXT,
             FOREIGN KEY (sale_id) REFERENCES sales(id),
             FOREIGN KEY (product_id) REFERENCES products(id)
+        )`, (err) => {
+            if (!err) {
+                db.run(`ALTER TABLE sale_items ADD COLUMN variant_id TEXT`, (err) => { });
+            }
+        });
+
+        // Cash Sessions Table (apertura/cierre de caja)
+        db.run(`CREATE TABLE IF NOT EXISTS cash_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            opened_by TEXT NOT NULL,
+            opened_at TEXT NOT NULL,
+            initial_amount REAL NOT NULL DEFAULT 0,
+            expected_cash REAL NOT NULL DEFAULT 0,
+            expected_card REAL NOT NULL DEFAULT 0,
+            closed_at TEXT,
+            closed_by TEXT,
+            counted_cash REAL,
+            difference REAL,
+            observations TEXT
         )`);
 
         // Settings Table
