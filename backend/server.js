@@ -130,114 +130,113 @@ app.delete('/api/products/:id', (req, res) => {
 
 // SALES
 app.post('/api/sales', (req, res) => {
-    const { id, date, total, payment_method, cashier, items } = req.body;
+    const { date, total, payment_method, cashier, items } = req.body;
 
     // Start Transaction
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
 
-        const insertSale = 'INSERT INTO sales (id, date, total, payment_method, cashier) VALUES (?,?,?,?,?)';
-        db.run(insertSale, [id, date, total, payment_method, cashier], function (err) {
+        // 1. Generate Custom ID (Sequential)
+        db.get("SELECT MAX(CAST(id AS INTEGER)) as maxId FROM sales", [], (err, row) => {
             if (err) {
-                console.error("Error inserting sale:", err);
+                console.error("Error generating ID:", err);
                 db.run('ROLLBACK');
-                return res.status(500).json({ error: err.message });
+                return res.status(500).json({ error: "Failed to generate Ticket ID" });
             }
 
+            let nextId = (row && row.maxId) ? row.maxId + 1 : 1;
+            const id = String(nextId).padStart(5, '0'); // "00001"
 
-
-            // Logic to update stock depends on if it's a variant or main product
-            const updateMainStock = 'UPDATE products SET stock = stock - ? WHERE id = ?';
-            const getProductVariants = 'SELECT variants FROM products WHERE id = ?';
-            const updateProductVariants = 'UPDATE products SET variants = ? WHERE id = ?';
-
-            // We need to process items sequentially to handle async DB queries inside
-            const processItems = async () => {
-                for (const item of items) {
-                    try {
-                        // 1. Determine if item is a variant or main product
-                        // Our frontend sends variant IDs as strings (e.g. "v1-256-nat") or numbers for main products
-                        // But wait, the cart item ID for a variant is the variant ID, but we need the PARENT ID to update the DB record.
-                        // CURRENTLY, the frontend sends the variant ID as item.id.
-                        // We need a way to find the parent. 
-                        // HACK: For now, I'll cheat. The `data/seed_sales.js` or `database.js` uses simple IDs. 
-                        // If `item.id` is a string starting with 'v', it's a variant. 
-                        // But we don't know the parent ID from just "v1...".
-                        // IMPROVEMENT: Frontend should send userId or we search. 
-                        // actually, in `ProductSearch.jsx`, we didn't store parentId in the cart item. 
-                        // Let's assume for this mock that we iterate products to find who owns this variant if it's a string.
-
-                        // Wait! A better approach for this mock: 
-                        // The variant ID I assigned is "v{parentId}-{...}". 
-                        // So "v1-256-nat" implies parent ID 1.
-                        // I will parse the parent ID from the variant string.
-
-                        let parentId = item.id;
-                        let isVariant = false;
-
-                        if (typeof item.id === 'string' && item.id.startsWith('v')) {
-                            isVariant = true;
-                            parentId = parseInt(item.id.split('-')[0].replace('v', ''));
-                        }
-
-                        // Insert Sale Item
-                        // We store parentId as product_id, and if it's a variant, we store its ID in variant_id
-                        const variantId = isVariant ? item.id : null;
-
-                        await new Promise((resolve, reject) => {
-                            db.run('INSERT INTO sale_items (sale_id, product_id, quantity, price, variant_id) VALUES (?,?,?,?,?)',
-                                [id, parentId, item.quantity, item.price, variantId],
-                                (err) => {
-                                    if (err) reject(err);
-                                    else resolve();
-                                });
-                        });
-
-                        // Update Stock
-                        if (isVariant) {
-                            // Fetch parent, find variant, decrease stock, update parent
-                            await new Promise((resolve, reject) => {
-                                db.get(getProductVariants, [parentId], (err, row) => {
-                                    if (err || !row) {
-                                        console.error("Error fetching parent for variant:", err);
-                                        resolve(); // Skip update if fail
-                                        return;
-                                    }
-                                    let variants = JSON.parse(row.variants || '[]');
-                                    const variantIndex = variants.findIndex(v => v.id === item.id);
-
-                                    if (variantIndex !== -1) {
-                                        variants[variantIndex].stock -= item.quantity;
-                                        db.run(updateProductVariants, [JSON.stringify(variants), parentId], (err) => {
-                                            if (err) reject(err);
-                                            else resolve();
-                                        });
-                                    } else {
-                                        resolve();
-                                    }
-                                });
-                            });
-                        } else {
-                            // Normal Product
-                            await new Promise((resolve, reject) => {
-                                db.run(updateMainStock, [item.quantity, item.id], (err) => {
-                                    if (err) reject(err);
-                                    else resolve();
-                                });
-                            });
-                        }
-
-                    } catch (error) {
-                        console.error("Error processing item:", error);
-                        // In a real app we might rollback here
-                    }
+            const insertSale = 'INSERT INTO sales (id, date, total, payment_method, cashier) VALUES (?,?,?,?,?)';
+            db.run(insertSale, [id, date, total, payment_method, cashier], function (err) {
+                if (err) {
+                    console.error("Error inserting sale:", err);
+                    db.run('ROLLBACK');
+                    return res.status(500).json({ error: err.message });
                 }
 
-                db.run('COMMIT');
-                res.json({ message: "Sale completed successfully", saleId: id });
-            };
+                // Logic to update stock depends on if it's a variant or main product
+                const updateMainStock = 'UPDATE products SET stock = stock - ? WHERE id = ?';
+                const getProductVariants = 'SELECT variants FROM products WHERE id = ?';
+                const updateProductVariants = 'UPDATE products SET variants = ? WHERE id = ?';
 
-            processItems();
+                // We need to process items sequentially to handle async DB queries inside
+                const processItems = async () => {
+                    for (const item of items) {
+                        try {
+                            // 1. Determine if item is a variant or main product
+                            let parentId = item.id;
+                            let isVariant = false;
+
+                            if (typeof item.id === 'string' && item.id.startsWith('v')) {
+                                isVariant = true;
+                                parentId = parseInt(item.id.split('-')[0].replace('v', ''));
+                            }
+
+                            // Insert Sale Item
+                            const variantId = isVariant ? item.id : null;
+
+                            await new Promise((resolve, reject) => {
+                                db.run('INSERT INTO sale_items (sale_id, product_id, quantity, price, variant_id) VALUES (?,?,?,?,?)',
+                                    [id, parentId, item.quantity, item.price, variantId],
+                                    (err) => {
+                                        if (err) reject(err);
+                                        else resolve();
+                                    });
+                            });
+
+                            // Update Stock
+                            if (isVariant) {
+                                // Fetch parent, find variant, decrease stock, update parent
+                                await new Promise((resolve, reject) => {
+                                    db.get(getProductVariants, [parentId], (err, row) => {
+                                        if (err || !row) {
+                                            resolve(); // Skip update if fail
+                                            return;
+                                        }
+                                        let variants = JSON.parse(row.variants || '[]');
+                                        const variantIndex = variants.findIndex(v => v.id === item.id);
+
+                                        if (variantIndex !== -1) {
+                                            variants[variantIndex].stock -= item.quantity;
+                                            db.run(updateProductVariants, [JSON.stringify(variants), parentId], (err) => {
+                                                if (err) reject(err);
+                                                else resolve();
+                                            });
+                                        } else {
+                                            resolve();
+                                        }
+                                    });
+                                });
+                            } else {
+                                // Normal Product
+                                await new Promise((resolve, reject) => {
+                                    db.run(updateMainStock, [item.quantity, item.id], (err) => {
+                                        if (err) reject(err);
+                                        else resolve();
+                                    });
+                                });
+                            }
+
+                            // Update Total Sold
+                            const updateTotalSold = 'UPDATE products SET total_sold = COALESCE(total_sold, 0) + ? WHERE id = ?';
+                            await new Promise((resolve) => {
+                                db.run(updateTotalSold, [item.quantity, parentId], (err) => {
+                                    resolve();
+                                });
+                            });
+
+                        } catch (error) {
+                            console.error("Error processing item:", error);
+                        }
+                    }
+
+                    db.run('COMMIT');
+                    res.json({ message: "Sale completed successfully", saleId: id });
+                };
+
+                processItems();
+            });
         });
     });
 });
@@ -561,6 +560,11 @@ app.post('/api/login', (req, res) => {
     });
 });
 
+// VERIFY TOKEN
+app.get('/api/auth/verify', authenticateToken, (req, res) => {
+    res.json({ message: "valid", user: req.user });
+});
+
 // USERS CRUD (Admin Only)
 
 // GET USERS
@@ -593,3 +597,26 @@ app.delete('/api/users/:id', authenticateToken, authorizeRole('ADMIN'), (req, re
         res.json({ message: "deleted", changes: this.changes });
     });
 });
+
+// UPDATE USER
+app.put('/api/users/:id', authenticateToken, authorizeRole('ADMIN'), (req, res) => {
+    const { name, username, password, role } = req.body;
+    const userId = req.params.id;
+
+    // Check if password update is requested
+    let sql, params;
+    if (password) {
+        const hash = bcrypt.hashSync(password, 10);
+        sql = "UPDATE users SET name = COALESCE(?, name), username = COALESCE(?, username), role = COALESCE(?, role), password = ? WHERE id = ?";
+        params = [name, username, role, hash, userId];
+    } else {
+        sql = "UPDATE users SET name = COALESCE(?, name), username = COALESCE(?, username), role = COALESCE(?, role) WHERE id = ?";
+        params = [name, username, role, userId];
+    }
+
+    db.run(sql, params, function (err) {
+        if (err) return res.status(400).json({ error: err.message });
+        res.json({ message: "updated", changes: this.changes });
+    });
+});
+

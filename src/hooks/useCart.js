@@ -13,7 +13,7 @@ export const useCart = (taxRate = 19) => {
                         : item
                 );
             }
-            return [...prev, { ...product, quantity: 1, subtotal: product.price }];
+            return [...prev, { ...product, quantity: product.quantity || 1, subtotal: (product.quantity || 1) * product.price }];
         });
     };
 

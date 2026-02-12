@@ -89,10 +89,23 @@ export const useSettings = (user) => {
         }
     };
 
+    const updateUser = async (userId, userData) => {
+        try {
+            await api.updateUser(userId, userData);
+            await loadSettings();
+            return true;
+        } catch (error) {
+            console.error("Error updating user:", error);
+            throw error;
+        }
+    };
+
     return {
         settings,
         updateSettings,
         createUser,
+        createUser,
+        updateUser,
         deleteUser,
         loading
     };

@@ -151,3 +151,56 @@
     background-color: #fce8e6;
     border-color: #f6aea9;
 }
+
+@media (max-width: 1024px) {
+    .container {
+        gap: var(--spacing-md);
+    }
+
+    .paymentMethods {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-sm);
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding-bottom: 20px;
+        /* Space at bottom */
+    }
+
+    .paymentMethods {
+        grid-template-columns: 1fr 1fr;
+        /* 2 columns on mobile */
+    }
+
+    .paymentCard {
+        padding: var(--spacing-sm);
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+
+    .paymentIconWrapper {
+        margin-right: 0;
+        width: 32px;
+        height: 32px;
+    }
+
+    .paymentName {
+        font-size: 0.8rem;
+    }
+
+    .chevronIcon {
+        display: none;
+    }
+
+    .completeSaleBtn {
+        padding: var(--spacing-md);
+    }
+
+    .completeSaleText {
+        font-size: 1rem;
+    }
+}

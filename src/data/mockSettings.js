@@ -1,5 +1,6 @@
 export const companySettings = {
     name: 'Accesorios Tech Chile SpA',
+    fantasyName: 'TecniWorld',
     rut: '76.123.456-K',
     address: 'Av. Providencia 1234, Oficina 502, Santiago',
     phone: '+56 9 8765 4321',

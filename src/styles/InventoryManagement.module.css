@@ -95,21 +95,27 @@
 }
 
 .backBtn {
-    padding: 8px 16px;
     background: white;
     border: 1px solid #dadce0;
-    color: #5f6368;
     border-radius: 8px;
-    font-weight: 500;
+    color: #5f6368;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 8px;
-    transition: background 0.2s;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 0;
+    padding: 8px 16px;
+    transition: all 0.2s;
+    height: 40px;
 }
 
 .backBtn:hover {
     background: #f1f3f4;
+    color: #202124;
+    border-color: #d2e3fc;
+    transform: translateX(-2px);
 }
 
 .headerActions {

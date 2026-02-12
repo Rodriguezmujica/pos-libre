@@ -1,11 +1,16 @@
-import React, { useState, useRef } from 'react';
-import { Printer, Calendar, ArrowLeft, CreditCard, Banknote, User, RotateCcw, X, Search } from 'lucide-react';
-import styles from '../styles/DailyReport.module.css';
-import { dailyStats, transactions, currentTicket } from '../data/mockReportData';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useUI } from '../../context/UIContext';
+import { Printer, ArrowLeft, CreditCard, Banknote, User, X, Search, TrendingUp, TrendingDown } from 'lucide-react';
+import styles from '../../styles/DailyReport.module.css';
 
-const DailyReport = ({ onBack, sales = [], user, onVoidSale }) => {
+const DailyReportPage = ({ onBack, sales = [], user, onVoidSale, inventory = [] }) => {
+    const { showModal } = useUI();
     const [filterType, setFilterType] = useState('today'); // 'today' | 'month' | 'custom'
     const [selectedId, setSelectedId] = useState(null);
+
+    // ... (rest of the component) ...
+
+
 
     // Custom date range state
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -49,8 +54,38 @@ const DailyReport = ({ onBack, sales = [], user, onVoidSale }) => {
 
     const filteredSales = getFilteredSales();
 
+    // Calculate Ranking Stats
+    const rankingStats = useMemo(() => {
+        // Map sales to product name
+        const salesMap = {};
+        // Use filteredSales to get meaningful stats for the period
+        filteredSales.forEach(sale => {
+            if (sale.status === 'VOIDED') return;
+            (sale.items || []).forEach(item => {
+                salesMap[item.name] = (salesMap[item.name] || 0) + item.quantity;
+            });
+        });
+
+        // Combine with inventory to ensure we have all products (even 0 sales)
+        const sourceProducts = (inventory && inventory.length > 0) ? inventory : Object.keys(salesMap).map(n => ({ name: n }));
+
+        const allProducts = sourceProducts.map(p => ({
+            name: p.name,
+            sold: salesMap[p.name] || 0
+        }));
+
+        // Sort
+        const sortedDesc = [...allProducts].sort((a, b) => b.sold - a.sold);
+        const top5 = sortedDesc.slice(0, 5);
+
+        const sortedAsc = [...allProducts].sort((a, b) => a.sold - b.sold);
+        const bottom5 = sortedAsc.slice(0, 5);
+
+        return { top5, bottom5 };
+    }, [filteredSales, inventory]);
+
     // Seleccionar el primer ticket por defecto si no hay ninguno seleccionado
-    React.useEffect(() => {
+    useEffect(() => {
         if (!selectedId && filteredSales.length > 0) {
             setSelectedId(filteredSales[0].id);
         } else if (filteredSales.length === 0) {
@@ -82,9 +117,28 @@ const DailyReport = ({ onBack, sales = [], user, onVoidSale }) => {
     }
 
     const confirmVoid = async () => {
-        if (!voidReason) return alert("Debe ingresar un motivo");
-        await onVoidSale(currentTicket.id, voidReason);
-        setIsVoidModalOpen(false);
+        if (!voidReason) {
+            showModal("Debe ingresar un motivo para anular la venta.", "Campo Requerido", "error");
+            return;
+        }
+        try {
+            await onVoidSale(currentTicket.id, voidReason);
+            setIsVoidModalOpen(false);
+            showModal("La venta ha sido anulada correctamente.", "Éxito", "success");
+        } catch (error) {
+            console.error("Error anulando venta:", error);
+            const errorMsg = error.response?.data?.error || error.message || "No se pudo anular la venta";
+            showModal(errorMsg, "Error al Anular", "error");
+            // If the error is date related or business logic, maybe we should close the modal or keep it open?
+            // Keeping it open allows them to try again if it was a network error, 
+            // but if it's "Already Voided", they should probably just close it.
+            // For now, let's leave it open so they see the error in the modal, 
+            // BUT if it's "already voided", the sales list might update and the modal might be irrelevant.
+            // Actually, perform a fresh check or close it if needed.
+            if (errorMsg.includes("already voided") || errorMsg.includes("ya anulada")) {
+                setIsVoidModalOpen(false);
+            }
+        }
     };
 
     return (
@@ -93,7 +147,7 @@ const DailyReport = ({ onBack, sales = [], user, onVoidSale }) => {
             {isVoidModalOpen && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000
+                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
                 }}>
                     <div style={{ background: 'white', padding: 24, borderRadius: 8, width: 400 }}>
                         <h3 style={{ marginTop: 0 }}>Anular Venta {currentTicket?.id}</h3>
@@ -125,7 +179,7 @@ const DailyReport = ({ onBack, sales = [], user, onVoidSale }) => {
                     </div>
                     <div className={styles.printDivider}></div>
                     <div className={styles.printInfo}>
-                        <p>Boleta: {currentTicket.id}</p>
+                        <p>Ticket: {currentTicket.id}</p>
                         <p>Fecha: {new Date(currentTicket.date).toLocaleString()}</p>
                         <p>Atendido por: {currentTicket.cashier}</p>
                     </div>
@@ -164,8 +218,14 @@ const DailyReport = ({ onBack, sales = [], user, onVoidSale }) => {
             {/* Header */}
             <div className={styles.header}>
                 <div className={styles.titleSection}>
-                    <h1>Reportes de Ventas</h1>
-                    <span className={styles.subtitle}>Monitorea el rendimiento financiero de tu tienda en tiempo real.</span>
+                    <button className={styles.backBtn} onClick={onBack} title="Volver al inicio">
+                        <ArrowLeft size={20} />
+                        <span>Volver</span>
+                    </button>
+                    <div>
+                        <h1>Reportes de Ventas</h1>
+                        <span className={styles.subtitle}>Monitorea el rendimiento financiero de tu tienda en tiempo real.</span>
+                    </div>
                 </div>
                 <div className={styles.controls}>
                     {/* Date Range Logic */}
@@ -212,10 +272,6 @@ const DailyReport = ({ onBack, sales = [], user, onVoidSale }) => {
                         <Printer size={18} />
                         Imprimir Ticket
                     </button>
-                    <button className={styles.backBtn} onClick={onBack}>
-                        <ArrowLeft size={18} />
-                        Volver
-                    </button>
                 </div>
             </div>
 
@@ -250,6 +306,39 @@ const DailyReport = ({ onBack, sales = [], user, onVoidSale }) => {
                     </div>
                     <div className={styles.cardFooter}>{cardPercentage.toFixed(1)}% DEL TOTAL</div>
                 </div>
+
+                {/* Ranking Card */}
+                <div className={styles.rankingCard}>
+                    <div className={styles.rankingSection}>
+                        <div className={styles.rankingTitle}>
+                            <TrendingUp size={14} color="#137333" />
+                            Más Vendidos
+                        </div>
+                        <div className={styles.rankingList}>
+                            {rankingStats.top5.map((p, i) => (
+                                <div key={i} className={styles.rankingItem}>
+                                    <span className={styles.rankingName} title={p.name}>{p.name}</span>
+                                    <span className={styles.rankingValue}>{p.sold}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className={styles.rankingSection}>
+                        <div className={styles.rankingTitle}>
+                            <TrendingDown size={14} color="#d93025" />
+                            Menos Vendidos
+                        </div>
+                        <div className={styles.rankingList}>
+                            {rankingStats.bottom5.map((p, i) => (
+                                <div key={i} className={styles.rankingItem}>
+                                    <span className={styles.rankingName} title={p.name}>{p.name}</span>
+                                    <span className={styles.rankingValue}>{p.sold}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Content Area */}
@@ -272,7 +361,7 @@ const DailyReport = ({ onBack, sales = [], user, onVoidSale }) => {
 
                         <div className={styles.tableHeader}>
                             <div>HORA</div>
-                            <div>Nº BOLETA</div>
+                            <div>Nº TICKET</div>
                             <div>MÉTODO</div>
                             <div style={{ textAlign: 'right' }}>TOTAL</div>
                         </div>
@@ -322,91 +411,93 @@ const DailyReport = ({ onBack, sales = [], user, onVoidSale }) => {
                 {/* Right Side: Ticket Detail */}
                 <div className={styles.rightColumn}>
                     {currentTicket ? (
-                        <div className={styles.ticketCard}>
-                            <div className={styles.ticketHeader}>
-                                <div className={styles.ticketTitle}>
-                                    <h2>Boleta {currentTicket.id}</h2>
-                                    <div className={styles.ticketTime}>{new Date(currentTicket.date).toLocaleString()}</div>
-                                </div>
-                                <span className={styles.statusBadge} style={
-                                    currentTicket.status === 'VOIDED' ? { background: '#fce8e6', color: '#c5221f' } : {}
-                                }>
-                                    {currentTicket.status === 'VOIDED' ? 'ANULADA' : (currentTicket.status || 'COMPLETADO')}
-                                </span>
-                            </div>
-
-                            <div className={styles.customerInfo}>
-                                <div className={styles.customerAvatar}>
-                                    <User size={18} />
-                                </div>
-                                <span className={styles.customerName}>{currentTicket.cashier}</span>
-                            </div>
-
-                            {/* Void Details */}
-                            {currentTicket.status === 'VOIDED' && currentTicket.voidMetadata && (
-                                <div style={{ background: '#fce8e6', padding: 12, borderRadius: 8, margin: '12px 0', border: '1px solid #fad2cf' }}>
-                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#d93025', fontWeight: 'bold' }}>Anulada por: {currentTicket.voidMetadata.by}</p>
-                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', color: '#5f6368', fontStyle: 'italic' }}>"{currentTicket.voidMetadata.reason}"</p>
-                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#5f6368' }}>{new Date(currentTicket.voidMetadata.at).toLocaleString()}</p>
-                                </div>
-                            )}
-
-                            {/* Items */}
-                            <div className={styles.ticketItems} style={currentTicket.status === 'VOIDED' ? { opacity: 0.5 } : {}}>
-                                <div className={styles.tableHeader} style={{ padding: '0 0 8px 0', background: 'transparent', borderBottom: '1px solid #f1f3f4', marginBottom: '16px', gridTemplateColumns: '3fr 1fr 1fr' }}>
-                                    <div>PRODUCTO</div>
-                                    <div style={{ textAlign: 'center' }}>CANT</div>
-                                    <div style={{ textAlign: 'right' }}>SUBTOTAL</div>
-                                </div>
-
-                                {currentTicket.items && (currentTicket.items || []).map((item, index) => (
-                                    <div key={index} className={styles.itemRow}>
-                                        <div className={styles.itemInfo}>
-                                            <span className={styles.itemName}>{item.name}</span>
-                                            <span className={styles.itemMeta}>${item.price.toLocaleString('es-CL', { maximumFractionDigits: 0 })} unit.</span>
-                                        </div>
-                                        <div className={styles.itemQty}>{item.quantity}</div>
-                                        <div className={styles.itemTotal}>${item.subtotal.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</div>
+                        <div className={styles.ticketCard} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+                                <div className={styles.ticketHeader}>
+                                    <div className={styles.ticketTitle}>
+                                        <h2>Ticket {currentTicket.id}</h2>
+                                        <div className={styles.ticketTime}>{new Date(currentTicket.date).toLocaleString()}</div>
                                     </div>
-                                ))}
-                            </div>
-
-                            <div className={styles.ticketSummary} style={currentTicket.status === 'VOIDED' ? { opacity: 0.5 } : {}}>
-                                <div className={styles.summaryRow}>
-                                    <span>Subtotal</span>
-                                    <span>${(currentTicket.subtotal || (currentTicket.total * (1 - 0.19))).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
-                                </div>
-                                <div className={styles.summaryRow}>
-                                    <span>IVA (Calculado)</span>
-                                    <span>${(currentTicket.tax || (currentTicket.total * 0.19)).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
-                                </div>
-                                <div className={styles.totalRow}>
-                                    <span className={styles.totalLabel}>TOTAL</span>
-                                    <span className={styles.totalValue} style={currentTicket.status === 'VOIDED' ? { textDecoration: 'line-through', color: '#d93025' } : {}}>
-                                        ${(currentTicket.total || 0).toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                                    <span className={styles.statusBadge} style={
+                                        currentTicket.status === 'VOIDED' ? { background: '#fce8e6', color: '#c5221f' } : {}
+                                    }>
+                                        {currentTicket.status === 'VOIDED' ? 'ANULADA' : (currentTicket.status || 'COMPLETADO')}
                                     </span>
                                 </div>
-                            </div>
 
-                            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                                <button className={styles.reprintBtn} onClick={handlePrint} style={{ flex: 1 }}>
-                                    <Printer size={18} />
-                                    Imprimir Ticket
-                                </button>
-                                {/* VOID BUTTON - Only if Active and Admin (assuming user prop is passed) */}
-                                {currentTicket.status !== 'VOIDED' && user?.role === 'ADMIN' && (
-                                    <button
-                                        onClick={handleVoidClick}
-                                        style={{
-                                            background: '#fce8e6', color: '#d93025', border: '1px solid #d93025',
-                                            borderRadius: 8, padding: '0 16px', fontWeight: 600, cursor: 'pointer',
-                                            display: 'flex', alignItems: 'center', gap: 8
-                                        }}
-                                    >
-                                        <X size={18} />
-                                        ANULAR
-                                    </button>
+                                <div className={styles.customerInfo}>
+                                    <div className={styles.customerAvatar}>
+                                        <User size={18} />
+                                    </div>
+                                    <span className={styles.customerName}>{currentTicket.cashier}</span>
+                                </div>
+
+                                {/* Void Details */}
+                                {currentTicket.status === 'VOIDED' && currentTicket.voidMetadata && (
+                                    <div style={{ background: '#fce8e6', padding: 12, borderRadius: 8, margin: '12px 0', border: '1px solid #fad2cf' }}>
+                                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#d93025', fontWeight: 'bold' }}>Anulada por: {currentTicket.voidMetadata.by}</p>
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', color: '#5f6368', fontStyle: 'italic' }}>"{currentTicket.voidMetadata.reason}"</p>
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#5f6368' }}>{new Date(currentTicket.voidMetadata.at).toLocaleString()}</p>
+                                    </div>
                                 )}
+
+                                {/* Items */}
+                                <div className={styles.ticketItems} style={currentTicket.status === 'VOIDED' ? { opacity: 0.5 } : {}}>
+                                    <div className={styles.tableHeader} style={{ padding: '0 0 8px 0', background: 'transparent', borderBottom: '1px solid #f1f3f4', marginBottom: '16px', gridTemplateColumns: '3fr 1fr 1fr' }}>
+                                        <div>PRODUCTO</div>
+                                        <div style={{ textAlign: 'center' }}>CANT</div>
+                                        <div style={{ textAlign: 'right' }}>SUBTOTAL</div>
+                                    </div>
+
+                                    {currentTicket.items && (currentTicket.items || []).map((item, index) => (
+                                        <div key={index} className={styles.itemRow}>
+                                            <div className={styles.itemInfo}>
+                                                <span className={styles.itemName}>{item.name}</span>
+                                                <span className={styles.itemMeta}>${item.price.toLocaleString('es-CL', { maximumFractionDigits: 0 })} unit.</span>
+                                            </div>
+                                            <div className={styles.itemQty}>{item.quantity}</div>
+                                            <div className={styles.itemTotal}>${item.subtotal.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className={styles.ticketSummary} style={currentTicket.status === 'VOIDED' ? { opacity: 0.5 } : {}}>
+                                    <div className={styles.summaryRow}>
+                                        <span>Subtotal</span>
+                                        <span>${(currentTicket.subtotal || (currentTicket.total * (1 - 0.19))).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                                    </div>
+                                    <div className={styles.summaryRow}>
+                                        <span>IVA (Calculado)</span>
+                                        <span>${(currentTicket.tax || (currentTicket.total * 0.19)).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                                    </div>
+                                    <div className={styles.totalRow}>
+                                        <span className={styles.totalLabel}>TOTAL</span>
+                                        <span className={styles.totalValue} style={currentTicket.status === 'VOIDED' ? { textDecoration: 'line-through', color: '#d93025' } : {}}>
+                                            ${(currentTicket.total || 0).toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                                    <button className={styles.reprintBtn} onClick={handlePrint} style={{ flex: 1 }}>
+                                        <Printer size={18} />
+                                        Imprimir Ticket
+                                    </button>
+                                    {/* VOID BUTTON - Only if Active and Admin (assuming user prop is passed) */}
+                                    {currentTicket.status !== 'VOIDED' && user?.role === 'ADMIN' && (
+                                        <button
+                                            onClick={handleVoidClick}
+                                            style={{
+                                                background: '#fce8e6', color: '#d93025', border: '1px solid #d93025',
+                                                borderRadius: 8, padding: '0 16px', fontWeight: 600, cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', gap: 8
+                                            }}
+                                        >
+                                            <X size={18} />
+                                            ANULAR
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     ) : (
@@ -420,4 +511,4 @@ const DailyReport = ({ onBack, sales = [], user, onVoidSale }) => {
     );
 };
 
-export default DailyReport;
+export default DailyReportPage;

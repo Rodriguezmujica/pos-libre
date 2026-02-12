@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle, AlertTriangle, Info } from 'lucide-react';
-import styles from '../styles/SettingsView.module.css';
+import styles from '../../styles/SettingsView.module.css';
 
 // Reusable Modal for Success, Error, and Info messages
 const SuccessModal = ({ isOpen, onClose, message, title, type = 'success' }) => {

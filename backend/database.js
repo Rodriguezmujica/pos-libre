@@ -52,9 +52,10 @@ const initializeDatabase = () => {
         )`, (err) => {
             if (!err) {
                 // Migration: Add columns if they don't exist (for existing DBs)
-                const columnsToAdd = ['location', 'image', 'keywords', 'variants'];
+                const columnsToAdd = ['location', 'image', 'keywords', 'variants', 'total_sold'];
                 columnsToAdd.forEach(col => {
-                    db.run(`ALTER TABLE products ADD COLUMN ${col} TEXT`, (err) => {
+                    const def = col === 'total_sold' ? 'INTEGER DEFAULT 0' : 'TEXT';
+                    db.run(`ALTER TABLE products ADD COLUMN ${col} ${def}`, (err) => {
                         // Ignore error if column already exists
                     });
                 });

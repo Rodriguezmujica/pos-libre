@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, DollarSign, Calculator, Lock } from 'lucide-react';
-import styles from '../styles/InventoryManagement.module.css'; // Reusing styles for consistency
+import styles from '../../../styles/InventoryManagement.module.css';
 
 const CashRegisterModal = ({ isOpen, mode, onClose, onConfirm, cashRegister }) => {
     const [amount, setAmount] = useState('');
@@ -81,15 +81,23 @@ const CashRegisterModal = ({ isOpen, mode, onClose, onConfirm, cashRegister }) =
                         <div style={{ background: '#f1f3f4', padding: 16, borderRadius: 8, marginBottom: 20 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                                 <span style={{ color: '#5f6368' }}>Fondo Inicial:</span>
-                                <span>${cashRegister?.session?.initialAmount?.toLocaleString()}</span>
+                                <span>${cashRegister?.session?.initialAmount?.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                                 <span style={{ color: '#5f6368' }}>Ventas Efectivo:</span>
-                                <span>${cashRegister?.session?.expectedCash?.toLocaleString()}</span>
+                                <span>${cashRegister?.session?.expectedCash?.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                <span style={{ color: '#5f6368' }}>Ventas Tarjeta:</span>
+                                <span>${cashRegister?.session?.expectedCard?.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontStyle: 'italic', fontSize: '0.9em' }}>
+                                <span style={{ color: '#5f6368' }}>Total Vendido (Día):</span>
+                                <span>${((cashRegister?.session?.expectedCash || 0) + (cashRegister?.session?.expectedCard || 0)).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #dadce0', paddingTop: 8, fontWeight: 'bold' }}>
-                                <span>Total Esperado:</span>
-                                <span>${(cashRegister?.session?.initialAmount + cashRegister?.session?.expectedCash)?.toLocaleString()}</span>
+                                <span>Total Efectivo Esperado:</span>
+                                <span>${(cashRegister?.session?.initialAmount + cashRegister?.session?.expectedCash)?.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
                             </div>
                         </div>
 
@@ -114,7 +122,7 @@ const CashRegisterModal = ({ isOpen, mode, onClose, onConfirm, cashRegister }) =
                                     color: calculateDifference() === 0 ? '#188038' : (calculateDifference() < 0 ? '#d93025' : '#1a73e8'),
                                     fontWeight: '500'
                                 }}>
-                                    Diferencia: ${calculateDifference().toLocaleString()}
+                                    Diferencia: ${calculateDifference().toLocaleString('es-CL', { maximumFractionDigits: 0 })}
                                     {calculateDifference() !== 0 && (
                                         <span style={{ fontWeight: 'normal', marginLeft: 8, color: '#5f6368' }}>
                                             ({calculateDifference() < 0 ? 'Faltante' : 'Sobrante'})

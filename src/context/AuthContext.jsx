@@ -8,13 +8,44 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        const storedToken = localStorage.getItem('token');
-        if (storedUser && storedToken) {
-            setUser(JSON.parse(storedUser));
-            api.setToken(storedToken);
-        }
-        setLoading(false);
+        const initAuth = async () => {
+            const storedUser = localStorage.getItem('user');
+            const storedToken = localStorage.getItem('token');
+            if (storedUser && storedToken) {
+                api.setToken(storedToken);
+                try {
+                    // Verify if token is still valid on server
+                    await api.verifyToken();
+                    setUser(JSON.parse(storedUser));
+                } catch (error) {
+                    console.warn("Token verification failed:", error);
+                    // Only logout if it's explicitly an auth error (401/403)
+                    // If it's a network error (server restarting), keep session to avoid annoyance
+                    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                        console.warn("Invalid token. Logging out.");
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('token');
+                        api.setToken(null);
+                        setUser(null);
+                    } else if (error.message === 'Invalid token') {
+                        // api.verifyToken throws 'Invalid token' on 401/403 based on previous view
+                        console.warn("Invalid token. Logging out.");
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('token');
+                        api.setToken(null);
+                        setUser(null);
+                    } else {
+                        // Network error or server down? Keep user locally to allow retry
+                        console.log("Network error or server down, keeping session.");
+                        // We still set the user so the app loads, but API calls might fail until server is back
+                        setUser(JSON.parse(storedUser));
+                    }
+                }
+            }
+            setLoading(false);
+        };
+
+        initAuth();
     }, []);
 
     const login = async (username, password) => {

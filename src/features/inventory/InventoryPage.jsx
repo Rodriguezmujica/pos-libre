@@ -4,18 +4,12 @@ import {
     Box, Trash2, Plus, Save, ScanBarcode, Image as ImageIcon,
     ChevronLeft, ChevronRight, ArrowLeft, X
 } from 'lucide-react';
-import styles from '../styles/InventoryManagement.module.css';
-import { categories } from '../data/mockInventory';
-import SuccessModal from './SuccessModal';
-import ConfirmationModal from './SuccessModal'; // Reusing SuccessModal as a base for confirmation if possible, or use the dedicated one
-// Actually, let's use the new ConfirmationModal we created earlier for sales! 
-// But wait, that one is specific to Sales (has total, method). 
-// Let's stick to using SuccessModal for alerts and maybe create a generic confirm in App.jsx?
-// Or better, let's just add a local confirmation state here.
+import styles from '../../styles/InventoryManagement.module.css';
+import { categories } from '../../data/mockInventory';
+import SuccessModal from '../../components/common/SuccessModal';
+import NotificationBell from '../../components/common/NotificationBell';
 
-import NotificationBell from './NotificationBell';
-
-const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, onDeleteProduct, settings, targetProductId }) => {
+const InventoryPage = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, onDeleteProduct, settings, targetProductId }) => {
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -36,6 +30,10 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, onAddPro
 
     const [modalState, setModalState] = useState({ isOpen: false, message: '', title: '', type: 'success' });
     const [deleteId, setDeleteId] = useState(null); // ID of product to delete
+
+    // Custom Categories State
+    const [localCategories, setLocalCategories] = useState(categories);
+    const [isAddingCategory, setIsAddingCategory] = useState(false);
 
     const [editVariants, setEditVariants] = useState([]);
     const [newVariant, setNewVariant] = useState({ name: '', stock: '', price: '' });
@@ -59,9 +57,10 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, onAddPro
 
     // Actualizar formulario cuando cambia el producto seleccionado o modo creación
     useEffect(() => {
+        setIsAddingCategory(false); // Reset custom category mode
         if (isCreating) {
             setEditName('');
-            setEditCategory(categories[0]);
+            setEditCategory(localCategories[0]);
             setEditPrice('');
             setEditCost('');
             setEditStock('');
@@ -86,7 +85,17 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, onAddPro
         }
     }, [selectedProduct, isCreating]);
 
-    // ... (keep useEffect for fetching product)
+    // Handle targetProductId from props (notification click)
+    useEffect(() => {
+        if (targetProductId && inventory.length > 0) {
+            const product = inventory.find(p => p.id === targetProductId);
+            if (product) {
+                setSelectedProduct(product);
+                setIsCreating(false);
+            }
+        }
+    }, [targetProductId, inventory]);
+
 
     const handleAddVariant = () => {
         if (!newVariant.name) return;
@@ -107,6 +116,11 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, onAddPro
     };
 
     const handleSave = async () => {
+        // Add to local categories if novel
+        if (editCategory && !localCategories.includes(editCategory)) {
+            setLocalCategories(prev => [...prev, editCategory]);
+        }
+
         const productData = {
             name: editName,
             category: editCategory,
@@ -119,8 +133,6 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, onAddPro
             location: editLocation,
             image: editImage
         };
-
-        // ... rest of handleSave
 
 
         try {
@@ -244,12 +256,12 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, onAddPro
                 </div>
             )}
 
-            {/* Top Header */}
             <div className={styles.topHeader}>
                 <div className={styles.logoArea}>
-                    <div className={styles.logoIcon} onClick={onBack} style={{ cursor: 'pointer' }}>
-                        <Box size={20} />
-                    </div>
+                    <button className={styles.backBtn} onClick={onBack} title="Volver al inicio">
+                        <ArrowLeft size={20} />
+                        <span>Volver</span>
+                    </button>
                     <h1 className={styles.title}>Gestión de Inventario</h1>
                 </div>
 
@@ -273,10 +285,6 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, onAddPro
                         <Plus size={18} /> Nuevo Producto
                     </button>
                     <div style={{ width: 1, height: 24, background: '#dadce0', margin: '0 8px' }}></div>
-                    <button className={styles.backBtn} onClick={onBack}>
-                        <ArrowLeft size={18} />
-                        Volver
-                    </button>
                     <NotificationBell
                         inventory={inventory}
                         settings={settings}
@@ -380,13 +388,45 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, onAddPro
                             <div className={styles.row2}>
                                 <div className={styles.formGroup}>
                                     <label className={styles.label}>CATEGORÍA</label>
-                                    <select
-                                        className={styles.input}
-                                        value={editCategory}
-                                        onChange={(e) => setEditCategory(e.target.value)}
-                                    >
-                                        {categories.map(cat => <option key={cat}>{cat}</option>)}
-                                    </select>
+                                    {isAddingCategory ? (
+                                        <div style={{ display: 'flex', gap: 8 }}>
+                                            <input
+                                                type="text"
+                                                className={styles.input}
+                                                value={editCategory}
+                                                onChange={(e) => setEditCategory(e.target.value.toUpperCase())}
+                                                placeholder="NUEVA CATEGORÍA"
+                                                autoFocus
+                                            />
+                                            <button
+                                                className={styles.secondaryBtn}
+                                                onClick={() => {
+                                                    setIsAddingCategory(false);
+                                                    setEditCategory(categories[0]);
+                                                }}
+                                                style={{ padding: '0 12px' }}
+                                                title="Cancelar"
+                                            >
+                                                <X size={18} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <select
+                                            className={styles.input}
+                                            value={editCategory}
+                                            onChange={(e) => {
+                                                if (e.target.value === 'NEW_CATEGORY_OPTION') {
+                                                    setIsAddingCategory(true);
+                                                    setEditCategory('');
+                                                } else {
+                                                    setEditCategory(e.target.value);
+                                                }
+                                            }}
+                                        >
+                                            {localCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                            <option value="NEW_CATEGORY_OPTION" style={{ fontWeight: 'bold', color: '#1a73e8' }}>+ CREAR NUEVA CATEGORÍA...</option>
+                                        </select>
+                                    )}
                                 </div>
                                 <div className={styles.formGroup}>
                                     <label className={styles.label}>CÓDIGO DE BARRAS</label>
@@ -608,4 +648,4 @@ const InventoryManagement = ({ onBack, inventory = [], onUpdateProduct, onAddPro
     );
 };
 
-export default InventoryManagement;
+export default InventoryPage;

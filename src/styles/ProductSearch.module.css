@@ -11,6 +11,10 @@
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
     background-color: #f3f6fb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
     /* Light blueish background from screenshot */
 }
 
@@ -19,6 +23,7 @@
     align-items: center;
     gap: var(--spacing-md);
     color: var(--color-text-secondary);
+    flex: 1;
 }
 
 .scanIcon {
@@ -174,5 +179,102 @@
 
 .stockCount {
     color: #1a73e8;
-    /* Blue for stock */
+}
+
+/* Mobile Product Grid (< 768px) */
+@media (max-width: 767px) {
+    .container {
+        gap: var(--spacing-sm);
+        padding: 0 16px;
+        /* User requested lateral padding */
+    }
+
+    .productList {
+        margin-top: 8px;
+        /* Separation from search bar */
+    }
+
+    .searchBar {
+        padding: var(--spacing-sm);
+    }
+
+    .tableHeader {
+        display: none;
+        /* Hide table headers in grid view */
+    }
+
+    .productList {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        /* User requested gap-3 equivalent */
+        background-color: transparent;
+        box-shadow: none;
+        overflow-y: auto;
+        max-height: 300px;
+        /* Limit height to prevent pushing content too far */
+    }
+
+    .productRow {
+        flex-direction: column;
+        align-items: flex-start;
+        background-color: white;
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md);
+        box-shadow: var(--shadow-sm);
+        gap: 4px;
+        position: relative;
+    }
+
+    .productRow:last-child {
+        border-bottom: 1px solid var(--color-border);
+        /* Restore border for last item in grid */
+    }
+
+    .colProduct {
+        width: 100%;
+        margin-bottom: 4px;
+    }
+
+    .productName {
+        font-size: 0.9rem;
+        line-height: 1.2;
+    }
+
+    .colCategory {
+        order: 2;
+        width: 100%;
+        text-align: left;
+        margin-bottom: 4px;
+    }
+
+    .colLocation {
+        display: none;
+        /* Hide location to save space */
+    }
+
+    .colPrice {
+        order: 3;
+        width: 100%;
+        text-align: left;
+        font-weight: bold;
+        font-size: 1rem;
+        color: var(--color-text-primary);
+    }
+
+    .colStock {
+        position: absolute;
+        top: var(--spacing-sm);
+        right: var(--spacing-sm);
+        text-align: right;
+        font-size: 0.8rem;
+        background: #e8f0fe;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .colActions {
+        display: none;
+        /* Tap huge card to add */
+    }
 }

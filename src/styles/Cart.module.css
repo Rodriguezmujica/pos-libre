@@ -153,3 +153,77 @@
     color: var(--color-text-secondary);
     font-style: italic;
 }
+
+/* Mobile Cart (< 768px) */
+@media (max-width: 767px) {
+    .container {
+        margin-top: 0;
+        /* Cart is below products now */
+        border-top: 1px solid var(--color-border);
+        background: white;
+    }
+
+    .header {
+        padding: 8px var(--spacing-md);
+        background-color: #f1f3f4;
+        border-radius: 0;
+    }
+
+    .tableHeader {
+        display: none;
+    }
+
+    .itemsContainer {
+        max-height: 250px;
+        /* Limit height to allow internal scroll while keeping Total visible */
+        min-height: 100px;
+    }
+
+    .cartItem {
+        padding: var(--spacing-sm) var(--spacing-md);
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        grid-template-rows: auto auto;
+        gap: 8px;
+    }
+
+    .colProduct {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    .colQty {
+        grid-column: 1;
+        grid-row: 2;
+        justify-content: flex-start;
+    }
+
+    .qtyControl {
+        height: 36px;
+    }
+
+    .qtyBtn {
+        width: 36px;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    .colPrice {
+        display: none;
+        /* Hide unit price, show subtotal */
+    }
+
+    .colSubtotal {
+        grid-column: 2;
+        grid-row: 2;
+        text-align: right;
+        align-self: center;
+        font-weight: bold;
+    }
+
+    .colAction {
+        grid-column: 3;
+        grid-row: 2;
+        align-self: center;
+    }
+}

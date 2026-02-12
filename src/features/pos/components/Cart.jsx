@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trash2, ShoppingCart, Minus, Plus } from 'lucide-react';
-import styles from '../styles/Cart.module.css';
+import styles from '../../../styles/Cart.module.css';
 
 const Cart = ({ items, onUpdateQuantity, onRemove }) => {
     return (
@@ -44,10 +44,10 @@ const Cart = ({ items, onUpdateQuantity, onRemove }) => {
                                 </div>
                             </div>
                             <div className={styles.colPrice}>
-                                ${item.price.toFixed(2)}
+                                ${item.price.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
                             </div>
                             <div className={styles.colSubtotal}>
-                                <strong>${(item.price * item.quantity).toFixed(2)}</strong>
+                                <strong>${(item.price * item.quantity).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</strong>
                             </div>
                             <div className={styles.colAction}>
                                 <button

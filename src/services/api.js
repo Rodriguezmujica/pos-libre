@@ -29,6 +29,16 @@ export const api = {
         return response.json();
     },
 
+    verifyToken: async () => {
+        const response = await fetch(`${API_URL}/auth/verify`, { headers: getHeaders() });
+        if (!response.ok) {
+            const error = new Error('Token verification failed');
+            error.response = response;
+            throw error;
+        }
+        return response.json();
+    },
+
     getUsers: async () => {
         const response = await fetch(`${API_URL}/users`, { headers: getHeaders() });
         if (!response.ok) throw new Error('Failed to fetch users');
@@ -53,6 +63,19 @@ export const api = {
             method: 'DELETE',
             headers: getHeaders()
         });
+        return response.json();
+    },
+
+    updateUser: async (id, userData) => {
+        const response = await fetch(`${API_URL}/users/${id}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(userData)
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to update user');
+        }
         return response.json();
     },
 
@@ -120,7 +143,7 @@ export const api = {
                     const error = JSON.parse(text);
                     errorMsg = error.error || errorMsg;
                 }
-            } catch (_) {}
+            } catch (_) { }
             throw new Error(errorMsg);
         }
         return text ? JSON.parse(text) : {};

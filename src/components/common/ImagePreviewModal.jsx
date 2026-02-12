@@ -1,6 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import styles from '../styles/SettingsView.module.css'; // Reusing modal styles for consistency
+import styles from '../../styles/SettingsView.module.css';
 
 const ImagePreviewModal = ({ isOpen, onClose, imageUrl, altText }) => {
     if (!isOpen || !imageUrl) return null;

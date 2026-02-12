@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Banknote, CreditCard, Smartphone, CheckCircle2, Box, FileText, Settings, LogOut, ArrowLeftRight, Lock } from 'lucide-react';
-import styles from '../styles/PaymentSidebar.module.css';
+import styles from '../../../styles/PaymentSidebar.module.css';
 
 const PaymentSidebar = ({ onShowReport, onShowInventory, onShowSettings, onCompleteSale, onLogout, user, onCloseRegister }) => {
     const [selectedMethod, setSelectedMethod] = useState('debit');

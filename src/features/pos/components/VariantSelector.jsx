@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Package, Check } from 'lucide-react';
-import styles from '../styles/SettingsView.module.css'; // Reusing modal styles
+import styles from '../../../styles/SettingsView.module.css';
 
 const VariantSelector = ({ isOpen, onClose, product, onSelectVariant }) => {
     if (!isOpen || !product) return null;

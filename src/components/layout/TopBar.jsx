@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Store, User } from 'lucide-react';
-import styles from '../styles/TopBar.module.css';
-import NotificationBell from './NotificationBell';
+import styles from '../../styles/TopBar.module.css';
+import NotificationBell from '../common/NotificationBell';
 
 const TopBar = ({ storeName, user, onUserClick, inventory = [], settings, onNotificationClick }) => {
     const [currentTime, setCurrentTime] = useState(new Date());

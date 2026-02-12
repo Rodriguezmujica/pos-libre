@@ -241,3 +241,69 @@
         transform: translateY(0);
     }
 }
+
+/* Mobile TopBar (< 768px) */
+@media (max-width: 767px) {
+    .container {
+        flex-direction: column;
+        align-items: center;
+        /* User requested centering */
+        gap: 12px;
+        /* User requested gap-3 equivalent */
+        padding: 12px 0;
+        width: 100%;
+    }
+
+    .storeInfo {
+        width: 100%;
+        margin-bottom: 0;
+        justify-content: center;
+        /* Center store info */
+    }
+
+    .storeDetails {
+        text-align: center;
+        align-items: center;
+    }
+
+    .storeName {
+        font-size: 1rem;
+    }
+
+    .rightSection {
+        width: 100%;
+        justify-content: center;
+        /* Center content */
+        gap: 16px;
+        background-color: transparent;
+        /* Cleaner look */
+        padding: 0;
+        box-shadow: none;
+    }
+
+    .notificationArea {
+        margin-right: 0;
+    }
+
+    .dateTime {
+        display: none;
+    }
+
+    .divider {
+        display: none;
+    }
+
+    .userInfo {
+        flex: 0 1 auto;
+        /* Don't stretch */
+        justify-content: center;
+    }
+
+    .userName {
+        font-size: 0.8rem;
+    }
+
+    .userRole {
+        font-size: 0.7rem;
+    }
+}

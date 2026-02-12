@@ -98,23 +98,40 @@
     gap: 8px;
 }
 
+.titleSection {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
 .backBtn {
-    padding: 8px 16px;
     background: white;
     border: 1px solid #dadce0;
-    color: #5f6368;
     border-radius: 8px;
-    font-weight: 500;
+    color: #5f6368;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 0;
+    padding: 8px 16px;
+    transition: all 0.2s;
+    height: 40px;
+}
+
+.backBtn:hover {
+    background: #f1f3f4;
+    color: #202124;
+    border-color: #d2e3fc;
+    transform: translateX(-2px);
 }
 
 /* Dashboard Grid */
 .dashboardGrid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(4, 1fr);
     gap: 24px;
 }
 
@@ -173,6 +190,71 @@
     margin-top: 8px;
     font-weight: 600;
     letter-spacing: 0.5px;
+}
+
+/* Ranking Card */
+.rankingCard {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+}
+
+.rankingSection {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rankingTitle {
+    font-size: 11px;
+    font-weight: 700;
+    color: #5f6368;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rankingList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.rankingItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed #f1f3f4;
+}
+
+.rankingItem:last-child {
+    border-bottom: none;
+}
+
+.rankingName {
+    color: #202124;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+
+.rankingValue {
+    font-weight: 600;
+    color: #202124;
+    font-size: 12px;
 }
 
 /* Structure Content */
@@ -561,9 +643,116 @@
         margin: 2px 0;
     }
 
+
     /* Remove browser headers/footers if possible (user setting mainly) */
     @page {
         margin: 0;
         size: auto;
+    }
+}
+
+/* Mobile Responsive (< 1024px) */
+@media (max-width: 1023px) {
+    .contentArea {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        overflow: visible;
+        /* Let page scroll */
+    }
+
+    .container {
+        height: auto;
+        overflow-y: auto;
+    }
+
+    .leftColumn,
+    .rightColumn {
+        width: 100%;
+        height: auto;
+        overflow: visible;
+    }
+
+    .tableBody {
+        max-height: 400px;
+        /* Limit height of list in mobile/tablet */
+        overflow-y: auto;
+    }
+}
+
+/* Mobile Specific (< 768px) */
+@media (max-width: 767px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .controls {
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 8px;
+    }
+
+    .filterGroup {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .filterBtn {
+        flex: 1;
+        white-space: nowrap;
+    }
+
+    .dashboardGrid {
+        grid-template-columns: 1fr;
+        /* Stack KPIs */
+        gap: 12px;
+    }
+
+    .rankingCard {
+        grid-column: 1 / -1;
+    }
+
+    /* Transform Table to Cards */
+    .tableHeader {
+        display: none;
+    }
+
+    .tableRow {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "id amount"
+            "time method";
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        background: white;
+    }
+
+    .boletaId {
+        grid-area: id;
+        font-size: 1.1em;
+    }
+
+    .amount {
+        grid-area: amount;
+        align-self: start;
+    }
+
+    .tableRow>div:first-child {
+        /* Time */
+        grid-area: time;
+        font-size: 0.9em;
+        color: #5f6368;
+    }
+
+    .tableRow>div:nth-child(3) {
+        /* Method */
+        grid-area: method;
+        justify-self: end;
     }
 }

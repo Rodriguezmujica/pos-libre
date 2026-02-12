@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bell, AlertTriangle } from 'lucide-react';
-import styles from '../styles/NotificationBell.module.css';
+import styles from '../../styles/NotificationBell.module.css';
 
 const NotificationBell = ({ inventory = [], settings, onNotificationClick }) => {
     const [showNotifications, setShowNotifications] = useState(false);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { AlertCircle, Check, X } from 'lucide-react';
-import styles from '../styles/SettingsView.module.css';
+import styles from '../../styles/SettingsView.module.css';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, total, method }) => {
     if (!isOpen) return null;

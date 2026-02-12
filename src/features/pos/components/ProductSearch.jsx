@@ -1,18 +1,27 @@
 import React, { useState } from 'react';
-import { Search, ScanBarcode, Eye } from 'lucide-react';
-import styles from '../styles/ProductSearch.module.css';
-import ImagePreviewModal from './ImagePreviewModal';
+import { Search, ScanBarcode, Eye, PlusCircle } from 'lucide-react';
+import styles from '../../../styles/ProductSearch.module.css';
+import ImagePreviewModal from '../../../components/common/ImagePreviewModal';
 import VariantSelector from './VariantSelector';
 
-const ProductSearch = ({ onAddToCart, products = [] }) => {
+const ProductSearch = ({ onAddToCart, products = [], onOpenCustomItem }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedImage, setSelectedImage] = useState(null);
     const [variantModalOpen, setVariantModalOpen] = useState(false);
     const [selectedProductForVariants, setSelectedProductForVariants] = useState(null);
 
-    const filteredProducts = products.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredProducts = React.useMemo(() => {
+        if (!searchTerm) {
+            // Sort by total_sold desc, take top 5
+            return [...products]
+                .sort((a, b) => (b.total_sold || 0) - (a.total_sold || 0))
+                .slice(0, 5);
+        }
+        return products.filter(product =>
+            product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (product.barcode && product.barcode.includes(searchTerm))
+        );
+    }, [products, searchTerm]);
 
     const handleProductClick = (product) => {
         if (product.variants && product.variants.length > 0) {
@@ -67,12 +76,40 @@ const ProductSearch = ({ onAddToCart, products = [] }) => {
                     />
                     <Search className={styles.searchIcon} />
                 </div>
+                {onOpenCustomItem && (
+                    <button
+                        onClick={onOpenCustomItem}
+                        style={{
+                            height: '100%',
+                            padding: '0 16px',
+                            background: '#e8f0fe',
+                            border: '1px solid #d2e3fc',
+                            borderRadius: '8px',
+                            color: '#1a73e8',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontWeight: '600',
+                            fontSize: '13px',
+                            whiteSpace: 'nowrap'
+                        }}
+                        title="Agregar item personalizado"
+                    >
+                        <PlusCircle size={18} />
+                        Item Personalizado
+                    </button>
+                )}
             </div>
 
             {/* Encabezado de Resultados */}
             <div className={styles.resultsHeader}>
-                <span className={styles.headerTitle}>RESULTADOS DE BÚSQUEDA</span>
-                <span className={styles.matchCount}>{filteredProducts.length} coincidencias encontradas</span>
+                <span className={styles.headerTitle}>
+                    {searchTerm ? "RESULTADOS DE BÚSQUEDA" : "MÁS VENDIDOS"}
+                </span>
+                <span className={styles.matchCount}>
+                    {filteredProducts.length} {searchTerm ? "coincidencias encontradas" : "productos destacados"}
+                </span>
             </div>
 
             {/* Lista de Productos */}

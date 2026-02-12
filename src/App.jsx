@@ -1,28 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import SuccessModal from './components/SuccessModal';
-import ConfirmationModal from './components/ConfirmationModal';
-import ExchangeModal from './components/ExchangeModal';
-import DailyReport from './components/DailyReport';
-import InventoryManagement from './components/InventoryManagement';
-import SettingsView from './components/SettingsView';
-import Login from './components/Login';
-import PosView from './components/PosView';
+import { UIProvider, useUI } from './context/UIContext';
+
+// Common Components
+import ConfirmationModal from './components/common/ConfirmationModal';
+
+// Features / Pages
+import LoginPage from './features/auth/LoginPage';
+import InventoryPage from './features/inventory/InventoryPage';
+import DailyReportPage from './features/reports/DailyReportPage';
+import SettingsPage from './features/settings/SettingsPage';
+import PosPage from './features/pos/PosPage';
+
+// POS Specific Components (Dialogs logic hoisted to App or handled within POS, 
+// here they are hoisted because of the hook usage in App.jsx)
+import ExchangeModal from './features/pos/components/ExchangeModal';
+import StockWarningModal from './features/pos/components/StockWarningModal';
+
 import { api } from './services/api';
 
 // Hooks
 import { useCart } from './hooks/useCart';
 import { useInventory } from './hooks/useInventory';
 import { useSettings } from './hooks/useSettings';
+import { useCashRegister } from './hooks/useCashRegister';
+import { useStock } from './hooks/useStock';
+import { useTransaction } from './hooks/useTransaction';
 import { useSales } from './hooks/useSales';
 
 function AppContent() {
   const { user, logout } = useAuth();
+  const { showModal } = useUI(); // Use UI Context
 
   const {
     settings,
     updateSettings,
     createUser,
+    updateUser,
     deleteUser
   } = useSettings(user);
 
@@ -34,238 +48,170 @@ function AppContent() {
     refreshInventory
   } = useInventory();
 
+  // Extract tax rate safely
+  const taxRate = settings?.system?.taxRate !== undefined ? settings.system.taxRate : 19;
+
+  const cartHook = useCart(taxRate); // Get the whole hook object to pass to useTransaction
   const {
     cartItems,
     addToCart,
     updateQuantity,
     removeFromCart,
-    clearCart,
     subtotal,
     tax,
     total
-  } = useCart(settings?.system?.taxRate !== undefined ? settings.system.taxRate : 19);
+  } = cartHook;
 
+  // 1. Cash Register Logic extracted
+  const cashRegisterHook = useCashRegister(user);
   const {
-    sales,
-    createSale,
-    processExchange,
-    voidSale
-  } = useSales();
+    cashRegister,
+    openCashRegister,
+    closeCashRegister
+  } = cashRegisterHook;
 
-  // Local UI State
+  // 2. Stock Logic extracted
+  const stockHook = useStock(inventory, cartItems, addToCart);
+  const {
+    stockWarning,
+    checkStockAndAdd,
+    confirmAddWithNoStock,
+    closeStockWarning
+  } = stockHook;
+
+  // 3. Transaction Logic extracted
+  const transactionHook = useTransaction(cartHook, cashRegisterHook, user, refreshInventory);
+
+  // 4. Sales Logic (for Reports)
+  const { sales } = useSales();
+
+  // Local UI State (Navigational state primarily)
   const [currentView, setCurrentView] = useState('POS');
-  const [modalState, setModalState] = useState({ isOpen: false, message: '', title: '', type: 'success' });
-  const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
-  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
-  const [pendingSale, setPendingSale] = useState(null);
   const [notificationTargetId, setNotificationTargetId] = useState(null);
 
-  // Cash Register State (persistido en backend; se carga al iniciar)
-  const [cashRegister, setCashRegister] = useState({
-    isOpen: false,
-    session: null,
-    lastClosing: null
-  });
-
-  // Cargar sesión de caja al tener usuario (y tras F5)
-  useEffect(() => {
-    if (!user) return;
-    api.getCashSession()
-      .then((data) => {
-        if (data.isOpen && data.session) {
-          setCashRegister({
-            isOpen: true,
-            session: {
-              ...data.session,
-              openedBy: user // usar usuario actual para mostrar nombre completo
-            },
-            lastClosing: null
-          });
-        }
-      })
-      .catch(() => {
-        // Sin sesión abierta o error: dejar caja cerrada
-      });
-  }, [user]);
-
-  const showModal = (message, title, type = 'success') => {
-    setModalState({ isOpen: true, message, title, type });
-  };
-  const closeModal = () => setModalState({ ...modalState, isOpen: false });
-
-  // Cash Register Logic (persiste en backend)
-  const openCashRegister = async (initialAmount) => {
-    try {
-      const data = await api.openCashSession(initialAmount);
-      setCashRegister({
-        isOpen: true,
-        session: {
-          ...data.session,
-          openedBy: user
-        },
-        lastClosing: null
-      });
-    } catch (err) {
-      showModal(err.message || 'Error al abrir caja', 'Error', 'error');
-    }
-  };
-
-  const closeCashRegister = async (countedCash, observations) => {
-    const { session } = cashRegister;
-    if (!session) return;
-    try {
-      const data = await api.closeCashSession({
-        countedCash,
-        observations,
-        expectedCash: session.expectedCash,
-        expectedCard: session.expectedCard,
-        initialAmount: session.initialAmount
-      });
-      setCashRegister({
-        isOpen: false,
-        session: null,
-        lastClosing: {
-          ...data.lastClosing,
-          closedBy: user,
-          opening: session,
-          expectedCash: session.initialAmount + session.expectedCash,
-          countedCash: parseFloat(countedCash),
-          difference: parseFloat(countedCash) - (session.initialAmount + session.expectedCash),
-          observations
-        }
-      });
-    } catch (err) {
-      showModal(err.message || 'Error al cerrar caja', 'Error', 'error');
-    }
-  };
-
-  if (!user) {
-    return <Login />;
-  }
-
-  // Handlers
+  // Handlers Wrappers - catching errors and showing global modal
   const handleUpdateProduct = async (product) => {
-    // ... (existing code)
+    try {
+      await updateProduct(product);
+      await refreshInventory();
+      showModal("Producto actualizado correctamente", "Éxito");
+    } catch (error) {
+      showModal("Error al actualizar producto", "Error", "error");
+    }
+  };
+
+  const handleAddProduct = async (product) => {
+    try {
+      await addProduct(product);
+      await refreshInventory();
+      showModal("Producto agregado correctamente", "Éxito");
+    } catch (error) {
+      showModal("Error al agregar producto", "Error", "error");
+    }
+  };
+
+  const handleDeleteProduct = async (id) => {
+    try {
+      await deleteProduct(id);
+      await refreshInventory();
+      showModal("Producto eliminado correctamente", "Éxito");
+    } catch (error) {
+      showModal("Error al eliminar producto", "Error", "error");
+    }
   };
 
   const handleUpdateSettings = async (newSettings) => {
-    // ... (existing code)
+    try {
+      await updateSettings(newSettings);
+      showModal("Configuración guardada", "Éxito");
+    } catch (error) {
+      showModal("Error al guardar configuración", "Error", "error");
+    }
   };
 
   const handleCreateUser = async (userData) => {
-    // ... (existing code)
+    try {
+      await createUser(userData);
+      showModal("Usuario creado correctamente", "Éxito");
+    } catch (error) {
+      showModal(error.message || "Error al crear usuario", "Error", "error");
+    }
+  };
+
+  const handleUpdateUser = async (userId, userData) => {
+    try {
+      await updateUser(userId, userData);
+      showModal("Usuario actualizado correctamente", "Éxito");
+    } catch (error) {
+      showModal(error.message || "Error al actualizar usuario", "Error", "error");
+    }
   };
 
   const handleDeleteUser = async (userId) => {
-    // ... (existing code)
-  };
-
-  // Step 1: Request Confirmation
-  const handleCompleteSale = (paymentMethod) => {
-    // ... (existing code)
-  };
-
-  // Step 2: Execute Sale after Confirmation
-  const executeSale = async () => {
-    setIsConfirmationOpen(false); // Close confirmation
-    const paymentMethod = pendingSale;
-
     try {
-      const { result } = await createSale({
-        cartItems,
-        total,
-        paymentMethod,
-        user,
-        note: ''
-      });
-
-      // Acumular totales en sesión de caja y persistir en backend
-      setCashRegister(prev => {
-        if (!prev.isOpen || !prev.session) return prev;
-        const session = { ...prev.session };
-        if (paymentMethod === 'cash') {
-          session.expectedCash += total;
-        } else if (paymentMethod === 'card' || paymentMethod === 'debit' || paymentMethod === 'credit') {
-          session.expectedCard += total;
-        }
-        api.updateCashSession(session.expectedCash, session.expectedCard).catch(() => {});
-        return { ...prev, session };
-      });
-
-      await refreshInventory();
-      clearCart();
-      setPendingSale(null);
-
-      showModal(
-        `Venta completada con éxito!\nID: ${result.saleId}\nTotal: $${total.toFixed(2)}\n\n--- TICKET ---\n${settings.company.fantasyName}\n${settings.ticket.footerText}`,
-        "Venta Exitosa"
-      );
-
+      await deleteUser(userId);
+      showModal("Usuario eliminado correctamente", "Éxito");
     } catch (error) {
-      showModal("Error al procesar la venta. Intente nuevamente.", "Error", "error");
+      showModal("Error al eliminar usuario", "Error", "error");
     }
   };
 
-  const handleConfirmExchange = async (returnedProduct) => {
+  const handleCompleteSaleWrapper = (paymentMethod) => {
     try {
-      setIsExchangeModalOpen(false);
-
-      const { result, difference } = await processExchange({
-        returnedProduct,
-        cartTotal: total,
-        cartItems,
-        user
-      });
-
-      await refreshInventory();
-      clearCart();
-
-      let message = `Cambio completado con éxito!\nID: ${result.saleId}`;
-      message += `\n\nProducto Devuelto: ${returnedProduct.name}`;
-      if (difference > 0) message += `\nCliente pagó diferencia: $${difference.toFixed(2)}`;
-      else if (difference < 0) message += `\nSe devolvió al cliente: $${Math.abs(difference).toFixed(2)}`;
-      else message += `\nCambio parejo (sin diferencia).`;
-
-      showModal(message, "Cambio Exitoso");
-
-    } catch (error) {
-      showModal("Error al procesar el cambio.", "Error", "error");
+      transactionHook.requestSale(paymentMethod);
+    } catch (err) {
+      showModal(err.message, "Error", "error");
     }
   };
+
+  const handleExecuteSaleWrapper = async () => {
+    try {
+      await transactionHook.executeSale(settings);
+      // Success message handled by effect below
+    } catch (err) {
+      if (!transactionHook.transactionState.error) {
+        showModal(err.message || "Error al procesar la venta", "Error", "error");
+      }
+    }
+  };
+
+  // Sync transaction messages to Global UI Modal
+  useEffect(() => {
+    if (transactionHook.transactionState.successMessage) {
+      showModal(transactionHook.transactionState.successMessage, "Éxito");
+      transactionHook.clearMessages();
+    }
+    if (transactionHook.transactionState.error) {
+      showModal(transactionHook.transactionState.error, "Error", "error");
+      transactionHook.clearMessages();
+    }
+  }, [transactionHook.transactionState.successMessage, transactionHook.transactionState.error, showModal, transactionHook]);
+
 
   const handleNotificationClick = (item) => {
     setNotificationTargetId(item.id);
     setCurrentView('INVENTORY');
   };
 
+  if (!user) {
+    return <LoginPage />;
+  }
+
   // Views
   if (currentView === 'INVENTORY') {
     return (
       <div style={{ height: '100vh', background: '#f8f9fa' }}>
-        <InventoryManagement
+        <InventoryPage
           onBack={() => {
             setCurrentView('POS');
             setNotificationTargetId(null);
           }}
           inventory={inventory}
           onUpdateProduct={handleUpdateProduct}
-          onAddProduct={async (product) => {
-            await addProduct(product);
-            await refreshInventory();
-          }}
-          onDeleteProduct={async (id) => {
-            await deleteProduct(id);
-            await refreshInventory();
-          }}
+          onAddProduct={handleAddProduct}
+          onDeleteProduct={handleDeleteProduct}
           settings={settings}
           targetProductId={notificationTargetId}
-        />
-        <SuccessModal
-          isOpen={modalState.isOpen}
-          onClose={closeModal}
-          message={modalState.message}
-          title={modalState.title}
-          type={modalState.type}
         />
       </div>
     );
@@ -274,18 +220,12 @@ function AppContent() {
   if (currentView === 'REPORT') {
     return (
       <div style={{ height: '100vh', background: '#f8f9fa' }}>
-        <DailyReport
+        <DailyReportPage
           onBack={() => setCurrentView('POS')}
           sales={sales}
           user={user}
-          onVoidSale={voidSale}
-        />
-        <SuccessModal
-          isOpen={modalState.isOpen}
-          onClose={closeModal}
-          message={modalState.message}
-          title={modalState.title}
-          type={modalState.type}
+          onVoidSale={transactionHook.voidSale}
+          inventory={inventory}
         />
       </div>
     );
@@ -294,19 +234,14 @@ function AppContent() {
   if (currentView === 'SETTINGS') {
     return (
       <div style={{ height: '100vh', background: '#f8f9fa' }}>
-        <SettingsView
+        <SettingsPage
           onBack={() => setCurrentView('POS')}
           settings={settings}
           onUpdateSettings={handleUpdateSettings}
-          onCreateUser={handleCreateUser}
+          onAddUser={handleCreateUser}
+          onUpdateUser={handleUpdateUser}
           onDeleteUser={handleDeleteUser}
-        />
-        <SuccessModal
-          isOpen={modalState.isOpen}
-          onClose={closeModal}
-          message={modalState.message}
-          title={modalState.title}
-          type={modalState.type}
+          users={settings.users || []} // Pass users from settings
         />
       </div>
     );
@@ -314,23 +249,26 @@ function AppContent() {
 
   return (
     <>
-      <PosView
+      <PosPage
         settings={settings}
         user={user}
         cashRegister={cashRegister}
-        onOpenRegister={openCashRegister}
-        onCloseRegister={closeCashRegister}
+        onOpenRegister={(amount) => {
+          openCashRegister(amount).catch(err => showModal(err.message, "Error", "error"));
+        }}
+        onCloseRegister={(cash, obs) => {
+          closeCashRegister(cash, obs).catch(err => showModal(err.message, "Error", "error"));
+        }}
         inventory={inventory}
         cartItems={cartItems}
         subtotal={subtotal}
         tax={tax}
         total={total}
-        addToCart={addToCart}
+        addToCart={checkStockAndAdd} // Use stock hook wrapper
         updateQuantity={updateQuantity}
         removeFromCart={removeFromCart}
         onShowReport={() => setCurrentView('REPORT')}
         onShowInventory={(item) => {
-          // If item is passed (from notification), handle it
           if (item && item.id) {
             handleNotificationClick(item);
           } else {
@@ -338,31 +276,33 @@ function AppContent() {
           }
         }}
         onShowSettings={() => setCurrentView('SETTINGS')}
-        onCompleteSale={handleCompleteSale}
+        onCompleteSale={handleCompleteSaleWrapper}
         logout={logout}
         exchangeModal={
           <ExchangeModal
-            isOpen={isExchangeModalOpen}
-            onClose={() => setIsExchangeModalOpen(false)}
-            onConfirm={handleConfirmExchange}
+            isOpen={transactionHook.transactionState.isExchangeModalOpen}
+            onClose={transactionHook.closeExchangeModal}
+            onConfirm={(product) => {
+              transactionHook.executeExchange(product).catch(err => showModal(err.message, "Error", "error"));
+            }}
             inventory={inventory}
             cartTotal={total}
           />
         }
       />
       <ConfirmationModal
-        isOpen={isConfirmationOpen}
-        onClose={() => setIsConfirmationOpen(false)}
-        onConfirm={executeSale}
+        isOpen={transactionHook.transactionState.isConfirmationOpen}
+        onClose={transactionHook.cancelSale}
+        onConfirm={handleExecuteSaleWrapper}
         total={total}
-        method={pendingSale}
+        method={transactionHook.transactionState.pendingPaymentMethod}
       />
-      <SuccessModal
-        isOpen={modalState.isOpen}
-        onClose={closeModal}
-        message={modalState.message}
-        title={modalState.title}
-        type={modalState.type}
+      <StockWarningModal
+        isOpen={stockWarning.isOpen}
+        onClose={closeStockWarning}
+        onConfirm={confirmAddWithNoStock}
+        product={stockWarning.product}
+        addedQty={stockWarning.addedQty}
       />
     </>
   );
@@ -371,7 +311,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <UIProvider>
+        <AppContent />
+      </UIProvider>
     </AuthProvider>
   );
 }
