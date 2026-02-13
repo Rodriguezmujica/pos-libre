@@ -311,6 +311,7 @@ const InventoryPage = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, 
                     </div>
 
                     <div className={styles.tableContainer}>
+                        <div className={styles.tableScrollWrapper}>
                         <div className={styles.tableHeader}>
                             <div>NOMBRE</div>
                             <div>CATEGORÍA</div>
@@ -351,6 +352,7 @@ const InventoryPage = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, 
 
                         <div className={styles.pagination}>
                             <span>Mostrando {filteredInventory.length} productos</span>
+                        </div>
                         </div>
                     </div>
                 </div>

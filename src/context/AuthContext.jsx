@@ -59,7 +59,8 @@ export const AuthProvider = ({ children }) => {
             return { success: true };
         } catch (error) {
             console.error("Login error:", error);
-            return { success: false, error: error.response?.data?.error || "Error de conexión" };
+            // error.message contiene el mensaje del servidor (ej. "Contraseña incorrecta", "Usuario no encontrado")
+            return { success: false, error: error.message || "Error de conexión" };
         }
     };
 

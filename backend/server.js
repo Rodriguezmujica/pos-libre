@@ -1,9 +1,23 @@
 const express = require('express');
+const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const db = require('./database');
+const multer = require('multer');
+const cron = require('node-cron');
+const path = require('path');
+const fs = require('fs');
+const { exec } = require('child_process');
 
 const app = express();
 const PORT = 3001;
+const appData = process.env.USER_DATA_PATH || __dirname;
+const backupDir = path.join(appData, 'backups');
+const dbPath = path.join(appData, 'pos.db'); // debe coincidir con database.js
+
+// Crear carpeta de backups si no existe
+if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+}
 
 app.use(cors());
 app.use(express.json());
@@ -78,19 +92,19 @@ app.post('/api/products', (req, res) => {
 
 app.put('/api/products/:id', (req, res) => {
     const { name, price, cost, stock, category, barcode, min_stock, location, image, keywords, variants } = req.body;
-    const sql = `UPDATE products set 
-           name = COALESCE(?,name), 
-           price = COALESCE(?,price), 
-           cost = COALESCE(?,cost), 
-           stock = COALESCE(?,stock), 
-           category = COALESCE(?,category), 
-           barcode = COALESCE(?,barcode), 
-           min_stock = COALESCE(?,min_stock),
-           location = COALESCE(?,location),
-           image = COALESCE(?,image),
-           keywords = COALESCE(?,keywords),
-           variants = COALESCE(?,variants)
-           WHERE id = ?`;
+    const sql = `UPDATE products set
+name = COALESCE(?, name),
+    price = COALESCE(?, price),
+    cost = COALESCE(?, cost),
+    stock = COALESCE(?, stock),
+    category = COALESCE(?, category),
+    barcode = COALESCE(?, barcode),
+    min_stock = COALESCE(?, min_stock),
+    location = COALESCE(?, location),
+    image = COALESCE(?, image),
+    keywords = COALESCE(?, keywords),
+    variants = COALESCE(?, variants)
+           WHERE id = ? `;
 
     // Keywords and Variants must be stringified if present
     const keywordsStr = keywords ? JSON.stringify(keywords) : null;
@@ -318,8 +332,8 @@ app.post('/api/sales/:id/void', authenticateToken, authorizeRole('ADMIN'), (req,
 app.get('/api/sales', (req, res) => {
     const query = `
         SELECT s.id, s.date, s.total, s.payment_method, s.cashier, s.status, s.void_reason, s.voided_by, s.voided_at,
-               si.quantity, si.price as item_price, si.variant_id,
-               p.name as product_name
+    si.quantity, si.price as item_price, si.variant_id,
+    p.name as product_name
         FROM sales s
         LEFT JOIN sale_items si ON s.id = si.sale_id
         LEFT JOIN products p ON si.product_id = p.id
@@ -417,6 +431,34 @@ app.post('/api/settings', (req, res) => {
 });
 
 // --- CASH SESSION (Apertura/Cierre de Caja) ---
+// GET cash session history
+app.get('/api/cash-session/history', authenticateToken, authorizeRole('ADMIN'), (req, res) => {
+    const limit = req.query.limit || 50;
+    db.all(
+        "SELECT * FROM cash_sessions WHERE closed_at IS NOT NULL ORDER BY opened_at DESC LIMIT ?",
+        [limit],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            const history = rows.map(row => ({
+                id: row.id,
+                openedBy: row.opened_by,
+                openedAt: row.opened_at,
+                initialAmount: row.initial_amount,
+                closedBy: row.closed_by,
+                closedAt: row.closed_at,
+                expectedCash: row.expected_cash,
+                expectedCard: row.expected_card,
+                countedCash: row.counted_cash,
+                difference: row.difference,
+                observations: row.observations
+            }));
+
+            res.json({ message: "success", data: history });
+        }
+    );
+});
+
 // GET current open session (requires auth to know if we're logged in)
 app.get('/api/cash-session/current', authenticateToken, (req, res) => {
     db.get(
@@ -520,16 +562,118 @@ app.post('/api/cash-session/close', authenticateToken, (req, res) => {
                         observations: observations || null
                     }
                 });
-            }
-        );
+            });
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+// --- BACKUP DOWNLOAD & RESTORE ---
+app.get('/api/backup/download', authenticateToken, authorizeRole('ADMIN'), (req, res) => {
+    if (!fs.existsSync(dbPath)) {
+        return res.status(404).json({ error: 'No existe la base de datos' });
+    }
+    const filename = `backup-tecniworld-${new Date().toISOString().split('T')[0]}.sqlite`;
+    res.setHeader('Content-Type', 'application/x-sqlite3');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.sendFile(dbPath);
 });
 
-// --- AUTHENTICATION & USERS ---
+const uploadDir = path.join(appData, 'uploads');
+const upload = multer({ dest: uploadDir });
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+app.post('/api/backup/restore', authenticateToken, authorizeRole('ADMIN'), upload.single('backup'), (req, res) => {
+    if (!req.file || !req.file.path) {
+        return res.status(400).json({ error: 'No se envió ningún archivo' });
+    }
+    const tempPath = req.file.path;
+    const safetyBackup = path.join(backupDir, `safety-before-restore-${Date.now()}.sqlite`);
+    fs.copyFileSync(dbPath, safetyBackup);
+    db.close((err) => {
+        if (err) {
+            fs.unlinkSync(tempPath);
+            return res.status(500).json({ error: 'Error al cerrar la base de datos: ' + err.message });
+        }
+        try {
+            fs.copyFileSync(tempPath, dbPath);
+            fs.unlinkSync(tempPath);
+        } catch (e) {
+            fs.copyFileSync(safetyBackup, dbPath);
+            return res.status(500).json({ error: 'Error al restaurar: ' + e.message });
+        }
+        res.json({ message: 'Copia de seguridad restaurada. Reinicia el servidor para aplicar los cambios.' });
+    });
+});
+
+// 4. Weekly Auto-Backup (Every Sunday at 3 AM)
+cron.schedule('0 3 * * 0', () => {
+    console.log('Running weekly auto-backup...');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupName = `backup - auto - weekly - ${timestamp}.sqlite`;
+    const destPath = path.join(backupDir, backupName);
+
+    fs.copyFile(dbPath, destPath, (err) => {
+        if (err) console.error('Auto-backup failed:', err);
+        else console.log('Auto-backup successful:', destPath);
+    });
+});
+
+// 5. Clear Database (Dangerous)
+app.post('/api/database/clear', authenticateToken, authorizeRole('ADMIN'), (req, res) => {
+    const { password, confirmationPhrase } = req.body;
+    const adminUsername = req.user.username;
+
+    if (confirmationPhrase !== 'limpiarbasededatos') {
+        return res.status(400).json({ error: "Frase de confirmación incorrecta" });
+    }
+
+    // Verify Admin Password
+    db.get("SELECT password FROM users WHERE username = ?", [adminUsername], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!row) return res.status(401).json({ error: "Usuario no encontrado" });
+
+        const passwordIsValid = bcrypt.compareSync(password, row.password);
+        if (!passwordIsValid) return res.status(401).json({ error: "Contraseña incorrecta" });
+
+        // PERFORM SAFETY BACKUP FIRST
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const backupName = `safety - backup - before - clear - ${timestamp}.sqlite`;
+        const destPath = path.join(backupDir, backupName);
+
+        fs.copyFile(dbPath, destPath, (err) => {
+            if (err) console.error("Safety backup before clear failed:", err);
+            // Proceed anyway? Yes, but log it.
+
+            // EXECUTE CLEAR
+            db.serialize(() => {
+                db.run("BEGIN TRANSACTION");
+
+                // Clear operational tables
+                db.run("DELETE FROM sale_items");
+                db.run("DELETE FROM sales");
+                db.run("DELETE FROM cash_sessions");
+                // Reset sequences
+                db.run("DELETE FROM sqlite_sequence WHERE name='sales'");
+                db.run("DELETE FROM sqlite_sequence WHERE name='cash_sessions'");
+
+                // NOT clearing: users, products, settings, inventory.
+                // If user wanted FULL reset, we would delete products/categories too.
+                // Assuming "Clean Database" for a running shop usually means resetting sales history.
+
+                db.run("COMMIT", (err) => {
+                    if (err) {
+                        db.run("ROLLBACK");
+                        return res.status(500).json({ error: "Error clearing database: " + err.message });
+                    }
+                    res.json({ message: "Base de datos limpiada correctamente. Se ha guardado una copia de seguridad." });
+                });
+            });
+        });
+    });
+});
+
+
 
 // --- AUTHENTICATION & USERS ---
 // Middleware moved to top
@@ -620,3 +764,7 @@ app.put('/api/users/:id', authenticateToken, authorizeRole('ADMIN'), (req, res) 
     });
 });
 
+// --- INICIAR SERVIDOR ---
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});

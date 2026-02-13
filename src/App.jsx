@@ -80,7 +80,13 @@ function AppContent() {
   } = stockHook;
 
   // 3. Transaction Logic extracted
-  const transactionHook = useTransaction(cartHook, cashRegisterHook, user, refreshInventory);
+  // Fix: Pass fused object { ...state, updateSessionTotals } as expected by useTransaction
+  const transactionHook = useTransaction(
+    cartHook,
+    { ...cashRegister, updateSessionTotals: cashRegisterHook.updateSessionTotals },
+    user,
+    refreshInventory
+  );
 
   // 4. Sales Logic (for Reports)
   const { sales } = useSales();

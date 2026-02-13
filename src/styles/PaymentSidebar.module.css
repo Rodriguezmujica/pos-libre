@@ -180,6 +180,7 @@
         flex-direction: column;
         text-align: center;
         gap: 8px;
+        min-height: 44px; /* Área táctil mínima */
     }
 
     .paymentIconWrapper {
@@ -198,9 +199,14 @@
 
     .completeSaleBtn {
         padding: var(--spacing-md);
+        min-height: 44px; /* Área táctil mínima para dedos */
     }
 
     .completeSaleText {
         font-size: 1rem;
+    }
+
+    .actionBtn {
+        min-height: 44px;
     }
 }

@@ -180,6 +180,19 @@
     gap: 8px;
 }
 
+.primaryBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
 .actionBtn {
     padding: 6px 12px;
     border: 1px solid #dadce0;
@@ -200,6 +213,19 @@
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     overflow: hidden;
+}
+
+/* En móvil: scroll horizontal solo en la tabla, sin mover la página */
+.tableScrollWrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+    .tableScrollWrapper .tableHeader,
+    .tableScrollWrapper .tableRow {
+        min-width: 650px;
+    }
 }
 
 .tableHeader {
@@ -570,4 +596,53 @@
 
 .dangerBtn:hover {
     background: #fce8e6;
+}
+
+/* Responsive móvil */
+@media (max-width: 768px) {
+    .topHeader {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 12px 16px;
+    }
+
+    .searchArea {
+        width: 100%;
+    }
+
+    .headerActions {
+        flex-wrap: wrap;
+    }
+
+    .headerActions .primaryBtn,
+    .headerActions button {
+        min-height: 44px;
+        padding: 12px 16px;
+    }
+
+    .mainContent {
+        grid-template-columns: 1fr;
+        overflow: visible;
+    }
+
+    .leftPanel,
+    .rightPanel {
+        padding: 16px;
+    }
+
+    .updateBtn,
+    .actionBtn {
+        min-height: 44px;
+        padding: 12px 16px;
+    }
+
+    .qtyBtn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .row2 {
+        grid-template-columns: 1fr;
+    }
 }

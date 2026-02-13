@@ -198,6 +198,12 @@
         padding: var(--spacing-sm);
     }
 
+    .searchBar button {
+        min-height: 44px;
+        padding: 0 20px;
+        /* Área táctil mínima para "Item Personalizado" y botones */
+    }
+
     .tableHeader {
         display: none;
         /* Hide table headers in grid view */
@@ -224,6 +230,7 @@
         box-shadow: var(--shadow-sm);
         gap: 4px;
         position: relative;
+        min-height: 64px; /* Área táctil para agregar al carrito */
     }
 
     .productRow:last-child {

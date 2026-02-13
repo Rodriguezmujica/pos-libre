@@ -1,12 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useUI } from '../../context/UIContext';
-import { Printer, ArrowLeft, CreditCard, Banknote, User, X, Search, TrendingUp, TrendingDown } from 'lucide-react';
+import { api } from '../../services/api'; // Import api
+import { Printer, ArrowLeft, CreditCard, Banknote, User, X, Search, TrendingUp, TrendingDown, History } from 'lucide-react'; // Added History icon
 import styles from '../../styles/DailyReport.module.css';
 
 const DailyReportPage = ({ onBack, sales = [], user, onVoidSale, inventory = [] }) => {
     const { showModal } = useUI();
-    const [filterType, setFilterType] = useState('today'); // 'today' | 'month' | 'custom'
+    const [filterType, setFilterType] = useState('today'); // 'today' | 'month' | 'custom' | 'shifts'
     const [selectedId, setSelectedId] = useState(null);
+    const [shiftHistory, setShiftHistory] = useState([]); // State for history
 
     // ... (rest of the component) ...
 
@@ -16,6 +18,22 @@ const DailyReportPage = ({ onBack, sales = [], user, onVoidSale, inventory = [] 
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Load history when filterType is 'shifts' - solo si el usuario es ADMIN (el endpoint requiere ADMIN)
+    useEffect(() => {
+        if (filterType === 'shifts') {
+            if (user?.role !== 'ADMIN') {
+                setShiftHistory([]); // No mostrar datos si no es admin
+                return;
+            }
+            api.getCashSessionHistory()
+                .then(res => setShiftHistory(res.data || []))
+                .catch(err => {
+                    console.error('Error fetching shift history:', err);
+                    setShiftHistory([]); // Evitar estado inconsistente
+                });
+        }
+    }, [filterType, user?.role]);
 
     // Filtrar ventas
     const getFilteredSales = () => {
@@ -266,6 +284,14 @@ const DailyReportPage = ({ onBack, sales = [], user, onVoidSale, inventory = [] 
                         >
                             Rango
                         </button>
+                        <button
+                            className={`${styles.filterBtn} ${filterType === 'shifts' ? styles.active : ''}`}
+                            onClick={() => setFilterType('shifts')}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            <History size={14} />
+                            Turnos
+                        </button>
                     </div>
 
                     <button className={styles.primaryBtn} onClick={handlePrint} disabled={!currentTicket}>
@@ -341,172 +367,231 @@ const DailyReportPage = ({ onBack, sales = [], user, onVoidSale, inventory = [] 
                 </div>
             </div>
 
-            {/* Content Area */}
-            <div className={styles.contentArea}>
-                {/* Left Side: Transaction List */}
-                <div className={styles.leftColumn}>
-                    <div className={styles.sectionTitle}>Ventas del Período</div>
 
-                    <div className={styles.tableCard}>
-                        <div className={styles.searchBar}>
-                            <Search size={18} className={styles.searchIcon} />
-                            <input
-                                type="text"
-                                placeholder="Buscar nº boleta..."
-                                className={styles.searchInput}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-
-                        <div className={styles.tableHeader}>
-                            <div>HORA</div>
-                            <div>Nº TICKET</div>
-                            <div>MÉTODO</div>
-                            <div style={{ textAlign: 'right' }}>TOTAL</div>
-                        </div>
-
-                        <div className={styles.tableBody}>
-                            {filteredSales.length === 0 ? (
-                                <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>No hay ventas en este rango.</div>
-                            ) : (
-                                filteredSales.map((tx) => (
-                                    <div
-                                        key={tx.id}
-                                        className={`${styles.tableRow} ${selectedId === tx.id ? styles.active : ''}`}
-                                        onClick={() => setSelectedId(tx.id)}
-                                        style={tx.status === 'VOIDED' ? { opacity: 0.6 } : {}}
-                                    >
-                                        <div style={tx.status === 'VOIDED' ? { textDecoration: 'line-through' } : {}}>
-                                            {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </div>
-                                        <div className={styles.boletaId} style={tx.status === 'VOIDED' ? { textDecoration: 'line-through' } : {}}>
-                                            {tx.id.includes('-') ? tx.id.split('-')[1] : tx.id}
-                                        </div>
-                                        <div>
-                                            {tx.status === 'VOIDED' ? (
-                                                <span className={`${styles.methodTag}`} style={{ background: '#fce8e6', color: '#c5221f' }}>
-                                                    ANULADA
-                                                </span>
-                                            ) : (
-                                                <span className={`${styles.methodTag} ${tx.paymentMethod === 'cash' ? styles.methodCash : styles.methodCard}`}>
-                                                    {tx.paymentMethod === 'cash' ? <Banknote size={12} /> : <CreditCard size={12} />}
-                                                    {tx.paymentMethod === 'cash' ? 'Efectivo' : tx.paymentMethod === 'exchange' ? 'Cambio' : 'Tarjeta'}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className={styles.amount} style={{
-                                            textDecoration: tx.status === 'VOIDED' ? 'line-through' : 'none',
-                                            color: tx.status === 'VOIDED' ? '#d93025' : 'inherit'
-                                        }}>
-                                            ${tx.total.toLocaleString('es-CL', { minimumFractionDigits: 0 })}
-                                        </div>
+            {/* SHIFTS HISTORY TABLE */}
+            {
+                filterType === 'shifts' ? (
+                    <div className={styles.contentArea} style={{ flexDirection: 'column', padding: '0 24px' }}>
+                        <div className={styles.tableCard} style={{ flex: 1 }}>
+                            <div className={styles.tableHeader} style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', padding: '16px' }}>
+                                <div>APERTURA</div>
+                                <div>CIERRE</div>
+                                <div>USUARIO</div>
+                                <div style={{ textAlign: 'right' }}>EFECTIVO REAL</div>
+                                <div style={{ textAlign: 'right' }}>DIFERENCIA</div>
+                            </div>
+                            <div className={styles.tableBody}>
+                                {user?.role !== 'ADMIN' ? (
+                                    <div style={{ padding: '24px', textAlign: 'center', color: '#d93025', fontWeight: 500 }}>
+                                        Se requiere rol de administrador para ver el historial de turnos.
                                     </div>
-                                ))
-                            )}
+                                ) : shiftHistory.length === 0 ? (
+                                    <div style={{ padding: '24px', textAlign: 'center', color: '#666' }}>No hay historial de turnos cerrados.</div>
+                                ) : (
+                                    shiftHistory.map(shift => (
+                                        <div key={shift.id} className={styles.tableRow} style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', cursor: 'default' }}>
+                                            <div>
+                                                <div style={{ fontWeight: 600 }}>{new Date(shift.openedAt).toLocaleDateString()}</div>
+                                                <div style={{ fontSize: '0.85em', color: '#666' }}>{new Date(shift.openedAt).toLocaleTimeString()}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: 600 }}>{new Date(shift.closedAt).toLocaleDateString()}</div>
+                                                <div style={{ fontSize: '0.85em', color: '#666' }}>{new Date(shift.closedAt).toLocaleTimeString()}</div>
+                                            </div>
+                                            <div>
+                                                <div>{shift.openedBy}</div>
+                                                {shift.closedBy !== shift.openedBy && <div style={{ fontSize: '0.8em', color: '#666' }}>Cierra: {shift.closedBy}</div>}
+                                            </div>
+                                            <div style={{ textAlign: 'right', fontWeight: 600 }}>
+                                                ${(shift.countedCash || 0).toLocaleString('es-CL')}
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <span style={{
+                                                    color: shift.difference === 0 ? '#1e8e3e' : (shift.difference > 0 ? '#1e8e3e' : '#d93025'),
+                                                    fontWeight: 600,
+                                                    background: shift.difference === 0 ? '#e6f4ea' : (shift.difference > 0 ? '#e6f4ea' : '#fce8e6'),
+                                                    padding: '2px 6px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '0.9em'
+                                                }}>
+                                                    {shift.difference > 0 ? '+' : ''}{shift.difference.toLocaleString('es-CL')}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
+                ) : (
 
-                {/* Right Side: Ticket Detail */}
-                <div className={styles.rightColumn}>
-                    {currentTicket ? (
-                        <div className={styles.ticketCard} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
-                                <div className={styles.ticketHeader}>
-                                    <div className={styles.ticketTitle}>
-                                        <h2>Ticket {currentTicket.id}</h2>
-                                        <div className={styles.ticketTime}>{new Date(currentTicket.date).toLocaleString()}</div>
-                                    </div>
-                                    <span className={styles.statusBadge} style={
-                                        currentTicket.status === 'VOIDED' ? { background: '#fce8e6', color: '#c5221f' } : {}
-                                    }>
-                                        {currentTicket.status === 'VOIDED' ? 'ANULADA' : (currentTicket.status || 'COMPLETADO')}
-                                    </span>
+                    /* Content Area */
+                    <div className={styles.contentArea}>
+                        {/* Left Side: Transaction List */}
+                        <div className={styles.leftColumn}>
+                            <div className={styles.sectionTitle}>Ventas del Período</div>
+
+                            <div className={styles.tableCard}>
+                                <div className={styles.searchBar}>
+                                    <Search size={18} className={styles.searchIcon} />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar nº boleta..."
+                                        className={styles.searchInput}
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
                                 </div>
 
-                                <div className={styles.customerInfo}>
-                                    <div className={styles.customerAvatar}>
-                                        <User size={18} />
-                                    </div>
-                                    <span className={styles.customerName}>{currentTicket.cashier}</span>
+                                <div className={styles.tableHeader}>
+                                    <div>HORA</div>
+                                    <div>Nº TICKET</div>
+                                    <div>MÉTODO</div>
+                                    <div style={{ textAlign: 'right' }}>TOTAL</div>
                                 </div>
 
-                                {/* Void Details */}
-                                {currentTicket.status === 'VOIDED' && currentTicket.voidMetadata && (
-                                    <div style={{ background: '#fce8e6', padding: 12, borderRadius: 8, margin: '12px 0', border: '1px solid #fad2cf' }}>
-                                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#d93025', fontWeight: 'bold' }}>Anulada por: {currentTicket.voidMetadata.by}</p>
-                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', color: '#5f6368', fontStyle: 'italic' }}>"{currentTicket.voidMetadata.reason}"</p>
-                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#5f6368' }}>{new Date(currentTicket.voidMetadata.at).toLocaleString()}</p>
-                                    </div>
-                                )}
-
-                                {/* Items */}
-                                <div className={styles.ticketItems} style={currentTicket.status === 'VOIDED' ? { opacity: 0.5 } : {}}>
-                                    <div className={styles.tableHeader} style={{ padding: '0 0 8px 0', background: 'transparent', borderBottom: '1px solid #f1f3f4', marginBottom: '16px', gridTemplateColumns: '3fr 1fr 1fr' }}>
-                                        <div>PRODUCTO</div>
-                                        <div style={{ textAlign: 'center' }}>CANT</div>
-                                        <div style={{ textAlign: 'right' }}>SUBTOTAL</div>
-                                    </div>
-
-                                    {currentTicket.items && (currentTicket.items || []).map((item, index) => (
-                                        <div key={index} className={styles.itemRow}>
-                                            <div className={styles.itemInfo}>
-                                                <span className={styles.itemName}>{item.name}</span>
-                                                <span className={styles.itemMeta}>${item.price.toLocaleString('es-CL', { maximumFractionDigits: 0 })} unit.</span>
+                                <div className={styles.tableBody}>
+                                    {filteredSales.length === 0 ? (
+                                        <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>No hay ventas en este rango.</div>
+                                    ) : (
+                                        filteredSales.map((tx) => (
+                                            <div
+                                                key={tx.id}
+                                                className={`${styles.tableRow} ${selectedId === tx.id ? styles.active : ''}`}
+                                                onClick={() => setSelectedId(tx.id)}
+                                                style={tx.status === 'VOIDED' ? { opacity: 0.6 } : {}}
+                                            >
+                                                <div style={tx.status === 'VOIDED' ? { textDecoration: 'line-through' } : {}}>
+                                                    {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                                <div className={styles.boletaId} style={tx.status === 'VOIDED' ? { textDecoration: 'line-through' } : {}}>
+                                                    {tx.id.includes('-') ? tx.id.split('-')[1] : tx.id}
+                                                </div>
+                                                <div>
+                                                    {tx.status === 'VOIDED' ? (
+                                                        <span className={`${styles.methodTag}`} style={{ background: '#fce8e6', color: '#c5221f' }}>
+                                                            ANULADA
+                                                        </span>
+                                                    ) : (
+                                                        <span className={`${styles.methodTag} ${tx.paymentMethod === 'cash' ? styles.methodCash : styles.methodCard}`}>
+                                                            {tx.paymentMethod === 'cash' ? <Banknote size={12} /> : <CreditCard size={12} />}
+                                                            {tx.paymentMethod === 'cash' ? 'Efectivo' : tx.paymentMethod === 'exchange' ? 'Cambio' : 'Tarjeta'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className={styles.amount} style={{
+                                                    textDecoration: tx.status === 'VOIDED' ? 'line-through' : 'none',
+                                                    color: tx.status === 'VOIDED' ? '#d93025' : 'inherit'
+                                                }}>
+                                                    ${tx.total.toLocaleString('es-CL', { minimumFractionDigits: 0 })}
+                                                </div>
                                             </div>
-                                            <div className={styles.itemQty}>{item.quantity}</div>
-                                            <div className={styles.itemTotal}>${item.subtotal.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className={styles.ticketSummary} style={currentTicket.status === 'VOIDED' ? { opacity: 0.5 } : {}}>
-                                    <div className={styles.summaryRow}>
-                                        <span>Subtotal</span>
-                                        <span>${(currentTicket.subtotal || (currentTicket.total * (1 - 0.19))).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
-                                    </div>
-                                    <div className={styles.summaryRow}>
-                                        <span>IVA (Calculado)</span>
-                                        <span>${(currentTicket.tax || (currentTicket.total * 0.19)).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
-                                    </div>
-                                    <div className={styles.totalRow}>
-                                        <span className={styles.totalLabel}>TOTAL</span>
-                                        <span className={styles.totalValue} style={currentTicket.status === 'VOIDED' ? { textDecoration: 'line-through', color: '#d93025' } : {}}>
-                                            ${(currentTicket.total || 0).toLocaleString('es-CL', { maximumFractionDigits: 0 })}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                                    <button className={styles.reprintBtn} onClick={handlePrint} style={{ flex: 1 }}>
-                                        <Printer size={18} />
-                                        Imprimir Ticket
-                                    </button>
-                                    {/* VOID BUTTON - Only if Active and Admin (assuming user prop is passed) */}
-                                    {currentTicket.status !== 'VOIDED' && user?.role === 'ADMIN' && (
-                                        <button
-                                            onClick={handleVoidClick}
-                                            style={{
-                                                background: '#fce8e6', color: '#d93025', border: '1px solid #d93025',
-                                                borderRadius: 8, padding: '0 16px', fontWeight: 600, cursor: 'pointer',
-                                                display: 'flex', alignItems: 'center', gap: 8
-                                            }}
-                                        >
-                                            <X size={18} />
-                                            ANULAR
-                                        </button>
+                                        ))
                                     )}
                                 </div>
                             </div>
                         </div>
-                    ) : (
-                        <div className={styles.ticketCard} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#888' }}>
-                            Selecciona una venta para ver el detalle
+
+                        {/* Right Side: Ticket Detail */}
+                        <div className={styles.rightColumn}>
+                            {currentTicket ? (
+                                <div className={styles.ticketCard} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+                                        <div className={styles.ticketHeader}>
+                                            <div className={styles.ticketTitle}>
+                                                <h2>Ticket {currentTicket.id}</h2>
+                                                <div className={styles.ticketTime}>{new Date(currentTicket.date).toLocaleString()}</div>
+                                            </div>
+                                            <span className={styles.statusBadge} style={
+                                                currentTicket.status === 'VOIDED' ? { background: '#fce8e6', color: '#c5221f' } : {}
+                                            }>
+                                                {currentTicket.status === 'VOIDED' ? 'ANULADA' : (currentTicket.status || 'COMPLETADO')}
+                                            </span>
+                                        </div>
+
+                                        <div className={styles.customerInfo}>
+                                            <div className={styles.customerAvatar}>
+                                                <User size={18} />
+                                            </div>
+                                            <span className={styles.customerName}>{currentTicket.cashier}</span>
+                                        </div>
+
+                                        {/* Void Details */}
+                                        {currentTicket.status === 'VOIDED' && currentTicket.voidMetadata && (
+                                            <div style={{ background: '#fce8e6', padding: 12, borderRadius: 8, margin: '12px 0', border: '1px solid #fad2cf' }}>
+                                                <p style={{ margin: 0, fontSize: '0.9rem', color: '#d93025', fontWeight: 'bold' }}>Anulada por: {currentTicket.voidMetadata.by}</p>
+                                                <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', color: '#5f6368', fontStyle: 'italic' }}>"{currentTicket.voidMetadata.reason}"</p>
+                                                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#5f6368' }}>{new Date(currentTicket.voidMetadata.at).toLocaleString()}</p>
+                                            </div>
+                                        )}
+
+                                        {/* Items */}
+                                        <div className={styles.ticketItems} style={currentTicket.status === 'VOIDED' ? { opacity: 0.5 } : {}}>
+                                            <div className={styles.tableHeader} style={{ padding: '0 0 8px 0', background: 'transparent', borderBottom: '1px solid #f1f3f4', marginBottom: '16px', gridTemplateColumns: '3fr 1fr 1fr' }}>
+                                                <div>PRODUCTO</div>
+                                                <div style={{ textAlign: 'center' }}>CANT</div>
+                                                <div style={{ textAlign: 'right' }}>SUBTOTAL</div>
+                                            </div>
+
+                                            {currentTicket.items && (currentTicket.items || []).map((item, index) => (
+                                                <div key={index} className={styles.itemRow}>
+                                                    <div className={styles.itemInfo}>
+                                                        <span className={styles.itemName}>{item.name}</span>
+                                                        <span className={styles.itemMeta}>${item.price.toLocaleString('es-CL', { maximumFractionDigits: 0 })} unit.</span>
+                                                    </div>
+                                                    <div className={styles.itemQty}>{item.quantity}</div>
+                                                    <div className={styles.itemTotal}>${item.subtotal.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className={styles.ticketSummary} style={currentTicket.status === 'VOIDED' ? { opacity: 0.5 } : {}}>
+                                            <div className={styles.summaryRow}>
+                                                <span>Subtotal</span>
+                                                <span>${(currentTicket.subtotal || (currentTicket.total * (1 - 0.19))).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                                            </div>
+                                            <div className={styles.summaryRow}>
+                                                <span>IVA (Calculado)</span>
+                                                <span>${(currentTicket.tax || (currentTicket.total * 0.19)).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                                            </div>
+                                            <div className={styles.totalRow}>
+                                                <span className={styles.totalLabel}>TOTAL</span>
+                                                <span className={styles.totalValue} style={currentTicket.status === 'VOIDED' ? { textDecoration: 'line-through', color: '#d93025' } : {}}>
+                                                    ${(currentTicket.total || 0).toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                                            <button className={styles.reprintBtn} onClick={handlePrint} style={{ flex: 1 }}>
+                                                <Printer size={18} />
+                                                Imprimir Ticket
+                                            </button>
+                                            {/* VOID BUTTON - Only if Active and Admin (assuming user prop is passed) */}
+                                            {currentTicket.status !== 'VOIDED' && user?.role === 'ADMIN' && (
+                                                <button
+                                                    onClick={handleVoidClick}
+                                                    style={{
+                                                        background: '#fce8e6', color: '#d93025', border: '1px solid #d93025',
+                                                        borderRadius: 8, padding: '0 16px', fontWeight: 600, cursor: 'pointer',
+                                                        display: 'flex', alignItems: 'center', gap: 8
+                                                    }}
+                                                >
+                                                    <X size={18} />
+                                                    ANULAR
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className={styles.ticketCard} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#888' }}>
+                                    Selecciona una venta para ver el detalle
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
-            </div>
+                    </div>
+                )}
         </div>
     );
 };

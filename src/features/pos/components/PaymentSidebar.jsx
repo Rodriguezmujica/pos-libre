@@ -2,8 +2,16 @@ import React, { useState } from 'react';
 import { Banknote, CreditCard, Smartphone, CheckCircle2, Box, FileText, Settings, LogOut, ArrowLeftRight, Lock } from 'lucide-react';
 import styles from '../../../styles/PaymentSidebar.module.css';
 
-const PaymentSidebar = ({ onShowReport, onShowInventory, onShowSettings, onCompleteSale, onLogout, user, onCloseRegister }) => {
-    const [selectedMethod, setSelectedMethod] = useState('debit');
+const PaymentSidebar = ({ onShowReport, onShowInventory, onShowSettings, onCompleteSale, onLogout, user, onCloseRegister, selectedMethod: controlledMethod, onPaymentMethodChange }) => {
+    const [internalMethod, setInternalMethod] = useState('debit');
+    const selectedMethod = controlledMethod !== undefined ? controlledMethod : internalMethod;
+    const setSelectedMethod = (val) => {
+        if (onPaymentMethodChange) {
+            onPaymentMethodChange(val);
+        } else {
+            setInternalMethod(val);
+        }
+    };
 
     const paymentMethods = [
         { id: 'cash', name: 'Efectivo', icon: Banknote, color: '#34a853', bgColor: '#e6f4ea' },

@@ -31,6 +31,7 @@ const PosPage = ({
 }) => {
     const [isCloseRegisterModalOpen, setIsCloseRegisterModalOpen] = React.useState(false);
     const [isCustomItemModalOpen, setIsCustomItemModalOpen] = React.useState(false); // Custom Item Modal
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState('debit');
 
     // Force Open Modal if cashRegister is closed
     const showOpenModal = cashRegister && !cashRegister.isOpen;
@@ -64,6 +65,7 @@ const PosPage = ({
                     inventory={inventory}
                     settings={settings}
                     onNotificationClick={onShowInventory}
+                    cashRegister={cashRegister} // Pass prop
                 />}
                 otherComponents={
                     <>
@@ -118,9 +120,40 @@ const PosPage = ({
                         onCompleteSale={onCompleteSale}
                         onLogout={logout}
                         user={user}
-                        // Add Close Register Button prop if supported by PaymentSidebar, or we inject it differently
                         onCloseRegister={() => setIsCloseRegisterModalOpen(true)}
+                        selectedMethod={selectedPaymentMethod}
+                        onPaymentMethodChange={setSelectedPaymentMethod}
                     />
+                }
+                mobileStickyFooter={
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: '#5f6368', fontSize: '0.9rem' }}>Subtotal: ${subtotal.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                            <span style={{ color: '#1a73e8', fontSize: '1.25rem', fontWeight: '800' }}>
+                                Total: ${total.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => onCompleteSale(selectedPaymentMethod)}
+                            style={{
+                                width: '100%',
+                                padding: '14px 20px',
+                                minHeight: '44px',
+                                background: '#1a73e8',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 8,
+                                fontWeight: 700,
+                                fontSize: '1rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            COMPLETAR VENTA
+                        </button>
+                    </div>
                 }
                 bottomBar={
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>

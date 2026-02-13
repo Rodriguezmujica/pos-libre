@@ -1,4 +1,6 @@
-const API_URL = '/api';
+// Detect if running in Electron (file protocol) or web (http/s)
+const isFileProtocol = window.location.protocol === 'file:';
+const API_URL = isFileProtocol ? 'http://localhost:3001/api' : '/api';
 
 let authToken = null;
 
@@ -160,6 +162,12 @@ export const api = {
         return response.json();
     },
 
+    getCashSessionHistory: async () => {
+        const response = await fetch(`${API_URL}/cash-session/history`, { headers: getHeaders() });
+        if (!response.ok) throw new Error('Failed to fetch session history');
+        return response.json();
+    },
+
     openCashSession: async (initialAmount) => {
         const response = await fetch(`${API_URL}/cash-session/open`, {
             method: 'POST',
@@ -208,6 +216,48 @@ export const api = {
             headers: getHeaders(),
             body: JSON.stringify({ key, value })
         });
+        return response.json();
+    },
+
+    // Backup & Maintenance
+    downloadBackup: async () => {
+        const response = await fetch(`${API_URL}/backup/download`, { headers: getHeaders() });
+        if (!response.ok) throw new Error('Failed to download backup');
+        return response.blob();
+    },
+
+    restoreBackup: async (file) => {
+        const formData = new FormData();
+        formData.append('backup', file);
+
+        // Custom headers for FormData (let browser set Content-Type boundary)
+        const headers = {};
+        if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+        const response = await fetch(`${API_URL}/backup/restore`, {
+            method: 'POST',
+            headers: headers,
+            body: formData
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || 'Restore failed');
+        }
+        return response.json();
+    },
+
+    clearDatabase: async (password, confirmationPhrase) => {
+        const response = await fetch(`${API_URL}/database/clear`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ password, confirmationPhrase })
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || 'Database clear failed');
+        }
         return response.json();
     }
 };

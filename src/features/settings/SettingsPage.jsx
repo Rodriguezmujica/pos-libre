@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import {
     Store, Users, Bell, AlertTriangle, ArrowLeft,
-    Check, Save, Trash2, Plus, Shield, Settings
+    Check, Save, Trash2, Plus, Shield, Settings,
+    Database, Download, Upload
 } from 'lucide-react';
 import styles from '../../styles/SettingsView.module.css';
 import SuccessModal from '../../components/common/SuccessModal';
+import { api } from '../../services/api';
 
 const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUser, onUpdateUser, onDeleteUser }) => {
     const [activeTab, setActiveTab] = useState('general'); // 'general' | 'users' | 'system'
@@ -99,6 +101,59 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
         // Modal in App.jsx
     };
 
+    // Backup & Maintenance Handlers
+    const handleDownloadBackup = async () => {
+        try {
+            const blob = await api.downloadBackup();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup-tecniworld-${new Date().toISOString().split('T')[0]}.sqlite`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            setModalState({ isOpen: true, title: 'Éxito', message: 'Copia de seguridad descargada correctamente.', type: 'success' });
+        } catch (error) {
+            console.error(error);
+            setModalState({ isOpen: true, title: 'Error', message: 'Error al descargar la copia de seguridad.', type: 'error' });
+        }
+    };
+
+    const handleRestoreBackup = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (!window.confirm("ATENCIÓN: Restaurar una copia de seguridad SOBREESCRIBIRÁ todos los datos actuales. ¿Estás seguro de que quieres continuar?")) {
+            event.target.value = null;
+            return;
+        }
+
+        try {
+            await api.restoreBackup(file);
+            setModalState({ isOpen: true, title: 'Éxito', message: 'Restauración completada. Por favor reinicia el sistema.', type: 'success' });
+        } catch (error) {
+            console.error(error);
+            setModalState({ isOpen: true, title: 'Error', message: 'Error al restaurar: ' + error.message, type: 'error' });
+        }
+        event.target.value = null; // Reset input
+    };
+
+    // Clear DB State
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [clearDbAuth, setClearDbAuth] = useState({ password: '', phrase: '' });
+
+    const handleClearDatabase = async () => {
+        try {
+            await api.clearDatabase(clearDbAuth.password, clearDbAuth.phrase);
+            setShowClearConfirm(false);
+            setClearDbAuth({ password: '', phrase: '' });
+            setModalState({ isOpen: true, title: 'Sistema Limpio', message: 'La base de datos se ha limpiado correctamente (ventas y caja). Una copia de seguridad automática fue creada.', type: 'success' });
+        } catch (error) {
+            setModalState({ isOpen: true, title: 'Error', message: error.message, type: 'error' });
+        }
+    };
+
     if (!localSettings || !localSettings.company) return <div>Cargando configuración...</div>;
 
     return (
@@ -110,6 +165,69 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
                 message={modalState.message}
                 type={modalState.type}
             />
+
+            {showClearConfirm && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                }}>
+                    <div style={{ background: 'white', padding: 30, borderRadius: 12, width: 500, maxWidth: '90%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#dc3545', marginBottom: 20 }}>
+                            <AlertTriangle size={32} />
+                            <h2 style={{ margin: 0 }}>ZONA DE PELIGRO</h2>
+                        </div>
+                        <p style={{ marginBottom: 20, lineHeight: 1.5 }}>
+                            Estás a punto de <strong>ELIMINAR TODO EL HISTORIAL DE VENTAS Y CAJAS</strong>.
+                            <br />
+                            Los productos, usuarios y configuraciones se mantendrán.
+                            <br /><br />
+                            Esta acción es irreversible (aunque se hará una copia automática antes).
+                        </p>
+
+                        <div className={styles.formGroup}>
+                            <label>Contraseña Administrador</label>
+                            <input
+                                type="password"
+                                className={styles.input}
+                                value={clearDbAuth.password}
+                                onChange={e => setClearDbAuth({ ...clearDbAuth, password: e.target.value })}
+                            />
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label>Escribe la frase: <code>limpiarbasededatos</code></label>
+                            <input
+                                type="text"
+                                className={styles.input}
+                                placeholder="limpiarbasededatos"
+                                value={clearDbAuth.phrase}
+                                onChange={e => setClearDbAuth({ ...clearDbAuth, phrase: e.target.value })}
+                                style={{ border: clearDbAuth.phrase === 'limpiarbasededatos' ? '2px solid green' : '1px solid #ddd' }}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+                            <button
+                                onClick={() => setShowClearConfirm(false)}
+                                style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #ccc', background: 'white', cursor: 'pointer' }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleClearDatabase}
+                                disabled={!clearDbAuth.password || clearDbAuth.phrase !== 'limpiarbasededatos'}
+                                style={{
+                                    flex: 1, padding: 12, borderRadius: 8, border: 'none',
+                                    background: (!clearDbAuth.password || clearDbAuth.phrase !== 'limpiarbasededatos') ? '#ccc' : '#dc3545',
+                                    color: 'white', fontWeight: 'bold', cursor: 'pointer'
+                                }}
+                            >
+                                CONFIRMAR BORRADO
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className={styles.header}>
                 <div className={styles.titleSection}>
@@ -144,6 +262,13 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
                     >
                         <Bell size={20} />
                         <span>Sistema y Alertas</span>
+                    </div>
+                    <div
+                        className={`${styles.tabItem} ${activeTab === 'maintenance' ? styles.active : ''}`}
+                        onClick={() => setActiveTab('maintenance')}
+                    >
+                        <Database size={20} />
+                        <span>Mantenimiento</span>
                     </div>
                 </div>
 
@@ -397,14 +522,14 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
                                         <h3>Alertas de Stock Bajo</h3>
                                         <p>Notificar cuando un producto tenga pocas unidades.</p>
                                     </div>
-                                    <div className={styles.toggleSw}>
+                                    <label className={styles.toggleSw}>
                                         <input
                                             type="checkbox"
                                             checked={localSettings.system.lowStockAlert}
                                             onChange={(e) => handleChange('system', 'lowStockAlert', e.target.checked)}
                                         />
                                         <span className={styles.slider}></span>
-                                    </div>
+                                    </label>
                                 </div>
                                 {localSettings.system.lowStockAlert && (
                                     <div className={styles.settingBody}>
@@ -428,14 +553,14 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
                                         <h3>Impuestos (IVA)</h3>
                                         <p>El IVA está incluido en los precios de los productos.</p>
                                     </div>
-                                    <div className={styles.toggleSw}>
+                                    <label className={styles.toggleSw}>
                                         <input
                                             type="checkbox"
                                             checked={localSettings.system.taxIncluded ?? true}
                                             onChange={(e) => handleChange('system', 'taxIncluded', e.target.checked)}
                                         />
                                         <span className={styles.slider}></span>
-                                    </div>
+                                    </label>
                                 </div>
                                 <div className={styles.settingBody}>
                                     <label>Tasa de Impuesto (%)</label>
@@ -452,6 +577,77 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
                                 <button className={styles.saveBtn} onClick={handleSaveSystem}>
                                     <Save size={18} /> Guardar Cambios
                                 </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'maintenance' && (
+                        <div className={styles.panelContent}>
+                            <h2>Mantenimiento y Respaldo</h2>
+                            <p className={styles.subtitle}>Gestiona la base de datos y copias de seguridad.</p>
+
+                            {/* BACKUP SECTION */}
+                            <div className={styles.settingCard}>
+                                <div className={styles.settingHeader}>
+                                    <div className={styles.settingIcon} style={{ background: '#e6f4ea', color: '#1e8e3e' }}>
+                                        <Database size={24} />
+                                    </div>
+                                    <div>
+                                        <h3>Copia de Seguridad</h3>
+                                        <p>Descarga una copia completa de la base de datos.</p>
+                                    </div>
+                                    <button
+                                        onClick={handleDownloadBackup}
+                                        style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #1e8e3e', background: 'white', color: '#1e8e3e', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
+                                    >
+                                        <Download size={16} /> Descargar
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* RESTORE SECTION */}
+                            <div className={styles.settingCard}>
+                                <div className={styles.settingHeader}>
+                                    <div className={styles.settingIcon} style={{ background: '#fef7e0', color: '#b06000' }}>
+                                        <Upload size={24} />
+                                    </div>
+                                    <div>
+                                        <h3>Restaurar Base de Datos</h3>
+                                        <p>Sube un archivo .sqlite para restaurar el sistema.</p>
+                                    </div>
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            type="file"
+                                            accept=".sqlite"
+                                            onChange={handleRestoreBackup}
+                                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+                                        />
+                                        <button
+                                            style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #b06000', background: 'white', color: '#b06000', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
+                                        >
+                                            <Upload size={16} /> Restaurar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* DANGER ZONE - CLEAR DB */}
+                            <div className={styles.settingCard} style={{ border: '1px solid #f8d7da', background: '#fff' }}>
+                                <div className={styles.settingHeader}>
+                                    <div className={styles.settingIcon} style={{ background: '#f8d7da', color: '#721c24' }}>
+                                        <Trash2 size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 style={{ color: '#dc3545' }}>Borrado de Fábrica</h3>
+                                        <p>Elimina todo el historial de ventas y cajas. Mantiene productos y usuarios.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowClearConfirm(true)}
+                                        style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#dc3545', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
+                                    >
+                                        <AlertTriangle size={16} /> LIMPIAR
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}

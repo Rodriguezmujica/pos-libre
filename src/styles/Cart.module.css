@@ -199,11 +199,14 @@
     }
 
     .qtyControl {
-        height: 36px;
+        height: 44px;
+        min-height: 44px;
     }
 
     .qtyBtn {
-        width: 36px;
+        width: 44px;
+        min-width: 44px;
+        min-height: 44px;
         justify-content: center;
         font-size: 1.2rem;
     }
@@ -225,5 +228,13 @@
         grid-column: 3;
         grid-row: 2;
         align-self: center;
+    }
+
+    .deleteBtn {
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }

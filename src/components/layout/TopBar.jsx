@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Store, User } from 'lucide-react';
+import { Store, User, Lock, Unlock } from 'lucide-react';
 import styles from '../../styles/TopBar.module.css';
 import NotificationBell from '../common/NotificationBell';
 
-const TopBar = ({ storeName, user, onUserClick, inventory = [], settings, onNotificationClick }) => {
+const TopBar = ({ storeName, user, onUserClick, inventory = [], settings, onNotificationClick, cashRegister }) => { // Added cashRegister prop
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
@@ -38,6 +38,26 @@ const TopBar = ({ storeName, user, onUserClick, inventory = [], settings, onNoti
                     <h1 className={styles.storeName}>{storeName || 'TIENDA PRINCIPAL'}</h1>
                     <span className={styles.storeBranch}>SUCURSAL CENTRAL</span>
                 </div>
+
+                {/* Cash Register Status Badge */}
+                {cashRegister && (
+                    <div style={{
+                        marginLeft: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        backgroundColor: cashRegister.isOpen ? '#e6f4ea' : '#fce8e6',
+                        color: cashRegister.isOpen ? '#1e8e3e' : '#c5221f',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        border: `1px solid ${cashRegister.isOpen ? '#ceead6' : '#fad2cf'}`
+                    }}>
+                        {cashRegister.isOpen ? <Unlock size={14} /> : <Lock size={14} />}
+                        {cashRegister.isOpen ? 'CAJA ABIERTA' : 'CAJA CERRADA'}
+                    </div>
+                )}
             </div>
 
             <div className={styles.rightSection}>
