@@ -83,7 +83,10 @@ export const api = {
 
     // Products
     getProducts: async () => {
-        const response = await fetch(`${API_URL}/products`, { headers: getHeaders() });
+        const response = await fetch(`${API_URL}/products`, {
+            headers: getHeaders(),
+            cache: 'no-store'
+        });
         if (!response.ok) throw new Error('Network response was not ok');
         return response.json();
     },
@@ -116,7 +119,10 @@ export const api = {
 
     // Sales
     getSales: async () => {
-        const response = await fetch(`${API_URL}/sales`, { headers: getHeaders() });
+        const response = await fetch(`${API_URL}/sales`, {
+            headers: getHeaders(),
+            cache: 'no-store'
+        });
         if (!response.ok) throw new Error('Failed to fetch sales');
         return response.json();
     },
@@ -153,7 +159,10 @@ export const api = {
 
     // Cash Session (Apertura/Cierre de Caja)
     getCashSession: async () => {
-        const response = await fetch(`${API_URL}/cash-session/current`, { headers: getHeaders() });
+        const response = await fetch(`${API_URL}/cash-session/current`, {
+            headers: getHeaders(),
+            cache: 'no-store'
+        });
         if (response.status === 404) {
             // Backend sin ruta de cash-session o caja no abierta: tratar como sin sesión
             return { isOpen: false, session: null };

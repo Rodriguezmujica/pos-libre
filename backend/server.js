@@ -143,10 +143,12 @@ app.delete('/api/products/:id', (req, res) => {
 });
 
 // SALES
+// SALES
 app.post('/api/sales', (req, res) => {
     const { date, total, payment_method, cashier, items } = req.body;
 
     // Start Transaction
+    console.log("Creating sale with items:", JSON.stringify(items.map(i => ({ id: i.id, name: i.name }))));
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
 
@@ -176,8 +178,8 @@ app.post('/api/sales', (req, res) => {
 
                 // We need to process items sequentially to handle async DB queries inside
                 const processItems = async () => {
-                    for (const item of items) {
-                        try {
+                    try {
+                        for (const item of items) {
                             // 1. Determine if item is a variant or main product
                             let parentId = item.id;
                             let isVariant = false;
@@ -191,8 +193,8 @@ app.post('/api/sales', (req, res) => {
                             const variantId = isVariant ? item.id : null;
 
                             await new Promise((resolve, reject) => {
-                                db.run('INSERT INTO sale_items (sale_id, product_id, quantity, price, variant_id) VALUES (?,?,?,?,?)',
-                                    [id, parentId, item.quantity, item.price, variantId],
+                                db.run('INSERT INTO sale_items (sale_id, product_id, product_name, quantity, price, variant_id) VALUES (?,?,?,?,?,?)',
+                                    [id, parentId, item.name || 'Unknown Product', item.quantity, item.price, variantId],
                                     (err) => {
                                         if (err) reject(err);
                                         else resolve();
@@ -205,7 +207,7 @@ app.post('/api/sales', (req, res) => {
                                 await new Promise((resolve, reject) => {
                                     db.get(getProductVariants, [parentId], (err, row) => {
                                         if (err || !row) {
-                                            resolve(); // Skip update if fail
+                                            resolve(); // Skip update if fail to find pattern? Should probably error.
                                             return;
                                         }
                                         let variants = JSON.parse(row.variants || '[]');
@@ -239,14 +241,16 @@ app.post('/api/sales', (req, res) => {
                                     resolve();
                                 });
                             });
-
-                        } catch (error) {
-                            console.error("Error processing item:", error);
                         }
-                    }
 
-                    db.run('COMMIT');
-                    res.json({ message: "Sale completed successfully", saleId: id });
+                        db.run('COMMIT');
+                        res.json({ message: "Sale completed successfully", saleId: id });
+
+                    } catch (error) {
+                        console.error("Error processing items, rolling back:", error);
+                        db.run('ROLLBACK');
+                        res.status(500).json({ error: "Transaction failed: " + error.message });
+                    }
                 };
 
                 processItems();
@@ -313,9 +317,15 @@ app.post('/api/sales/:id/void', authenticateToken, authorizeRole('ADMIN'), (req,
                                 });
                             } else {
                                 // Default to main product
-                                await new Promise((resolve) => {
-                                    db.run(updateMainStock, [item.quantity, item.product_id], resolve);
-                                });
+                                // Check if product_id is valid (numeric) before updating stock
+                                if (item.product_id && !isNaN(item.product_id)) {
+                                    await new Promise((resolve) => {
+                                        db.run(updateMainStock, [item.quantity, item.product_id], resolve);
+                                    });
+                                } else {
+                                    // Custom item or invalid ID: skip stock return
+                                    // Could log this: console.log("Skipping stock return for custom/invalid item:", item.product_id);
+                                }
                             }
                         }
 
@@ -332,8 +342,8 @@ app.post('/api/sales/:id/void', authenticateToken, authorizeRole('ADMIN'), (req,
 app.get('/api/sales', (req, res) => {
     const query = `
         SELECT s.id, s.date, s.total, s.payment_method, s.cashier, s.status, s.void_reason, s.voided_by, s.voided_at,
-    si.quantity, si.price as item_price, si.variant_id,
-    p.name as product_name
+    si.quantity, si.price as item_price, si.variant_id, si.product_name as saved_name,
+    p.name as catalog_name
         FROM sales s
         LEFT JOIN sale_items si ON s.id = si.sale_id
         LEFT JOIN products p ON si.product_id = p.id
@@ -366,10 +376,10 @@ app.get('/api/sales', (req, res) => {
                     tax: 0
                 };
             }
-            if (row.product_name) {
+            if (row.saved_name || row.catalog_name || row.item_price) { // Include if we have price even without name
                 const subtotalItem = row.quantity * row.item_price;
                 salesMap[row.id].items.push({
-                    name: row.product_name,
+                    name: row.saved_name || row.catalog_name || 'Ítem Personalizado / Eliminado',
                     price: row.item_price,
                     quantity: row.quantity,
                     variantId: row.variant_id, // Added

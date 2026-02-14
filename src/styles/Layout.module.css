@@ -39,6 +39,8 @@
     min-width: 320px;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+    /* Enable scrolling for sidebar */
 }
 
 .bottomBar {
@@ -92,7 +94,8 @@
         flex-direction: column;
         padding: 8px;
         gap: 8px;
-        padding-bottom: 100px; /* Espacio para footer sticky */
+        padding-bottom: 100px;
+        /* Espacio para footer sticky */
     }
 
     .leftSection {
@@ -109,7 +112,8 @@
     }
 
     .bottomBar {
-        display: none; /* Ocultar en móvil, usar mobileStickyFooter */
+        display: none;
+        /* Ocultar en móvil, usar mobileStickyFooter */
     }
 
     .mobileStickyFooter {

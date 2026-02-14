@@ -180,7 +180,8 @@
         flex-direction: column;
         text-align: center;
         gap: 8px;
-        min-height: 44px; /* Área táctil mínima */
+        min-height: 44px;
+        /* Área táctil mínima */
     }
 
     .paymentIconWrapper {
@@ -199,7 +200,8 @@
 
     .completeSaleBtn {
         padding: var(--spacing-md);
-        min-height: 44px; /* Área táctil mínima para dedos */
+        min-height: 44px;
+        /* Área táctil mínima para dedos */
     }
 
     .completeSaleText {
@@ -208,5 +210,50 @@
 
     .actionBtn {
         min-height: 44px;
+    }
+}
+
+/* Notebook/Laptop optimization for shorter screens */
+@media (max-height: 900px) {
+    .container {
+        gap: var(--spacing-sm);
+    }
+
+    .paymentMethods {
+        gap: var(--spacing-sm);
+    }
+
+    .paymentCard {
+        padding: var(--spacing-sm);
+        min-height: 48px;
+    }
+
+    .paymentIconWrapper {
+        width: 36px;
+        height: 36px;
+        margin-right: var(--spacing-sm);
+    }
+
+    .paymentName {
+        font-size: 0.9rem;
+    }
+
+    .completeSaleBtn {
+        padding: var(--spacing-md);
+    }
+
+    .completeSaleText {
+        font-size: 1rem;
+    }
+
+    .actionBtn {
+        height: 60px;
+        padding: var(--spacing-sm);
+        font-size: 0.65rem;
+    }
+
+    .logoutBtn {
+        height: auto;
+        min-height: 48px;
     }
 }

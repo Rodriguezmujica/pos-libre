@@ -49,7 +49,8 @@ function AppContent() {
   } = useInventory();
 
   // Extract tax rate safely
-  const taxRate = settings?.system?.taxRate !== undefined ? settings.system.taxRate : 19;
+  const isTaxEnabled = settings?.system?.taxIncluded ?? true;
+  const taxRate = isTaxEnabled && settings?.system?.taxRate !== undefined ? settings.system.taxRate : 0;
 
   const cartHook = useCart(taxRate); // Get the whole hook object to pass to useTransaction
   const {
@@ -89,7 +90,14 @@ function AppContent() {
   );
 
   // 4. Sales Logic (for Reports)
-  const { sales } = useSales();
+  const { sales, refreshSales } = useSales();
+
+  // Reload sales when the user changes (e.g., login/logout) to ensure data freshness
+  useEffect(() => {
+    if (user) {
+      refreshSales();
+    }
+  }, [user, refreshSales]);
 
   // Local UI State (Navigational state primarily)
   const [currentView, setCurrentView] = useState('POS');

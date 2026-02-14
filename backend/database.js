@@ -104,6 +104,7 @@ const initializeDatabase = () => {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sale_id TEXT NOT NULL,
             product_id INTEGER,
+            product_name TEXT, 
             quantity INTEGER NOT NULL,
             price REAL NOT NULL,
             variant_id TEXT,
@@ -111,7 +112,9 @@ const initializeDatabase = () => {
             FOREIGN KEY (product_id) REFERENCES products(id)
         )`, (err) => {
             if (!err) {
+                // Migrations
                 db.run(`ALTER TABLE sale_items ADD COLUMN variant_id TEXT`, (err) => { });
+                db.run(`ALTER TABLE sale_items ADD COLUMN product_name TEXT`, (err) => { });
             }
         });
 
