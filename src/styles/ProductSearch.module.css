@@ -72,6 +72,10 @@
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 25vh;
+    /* Reduced to 25vh to give even more space to Cart */
 }
 
 .tableHeader {
@@ -144,6 +148,8 @@
 .listItems {
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .productRow {
@@ -230,7 +236,8 @@
         box-shadow: var(--shadow-sm);
         gap: 4px;
         position: relative;
-        min-height: 64px; /* Área táctil para agregar al carrito */
+        min-height: 64px;
+        /* Área táctil para agregar al carrito */
     }
 
     .productRow:last-child {

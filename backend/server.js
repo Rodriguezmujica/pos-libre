@@ -13,6 +13,7 @@ const PORT = 3001;
 const appData = process.env.USER_DATA_PATH || __dirname;
 const backupDir = path.join(appData, 'backups');
 const dbPath = path.join(appData, 'pos.db'); // debe coincidir con database.js
+console.log('[SERVER] Using Database at:', dbPath);
 
 // Crear carpeta de backups si no existe
 if (!fs.existsSync(backupDir)) {
@@ -135,7 +136,7 @@ app.delete('/api/products/:id', (req, res) => {
         req.params.id,
         function (err, result) {
             if (err) {
-                res.status(400).json({ "error": res.message });
+                res.status(400).json({ "error": err.message });
                 return;
             }
             res.json({ "message": "deleted", changes: this.changes });
@@ -616,6 +617,117 @@ app.post('/api/backup/restore', authenticateToken, authorizeRole('ADMIN'), uploa
     });
 });
 
+// --- PRINTING SERVICE ---
+const printerService = require('./printerService');
+
+// List Printers
+app.get('/api/printers', async (req, res) => {
+    try {
+        const printers = await printerService.listPrinters();
+        res.json({ message: "success", data: printers });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Print Ticket
+
+
+// Helper to get settings for printing
+const getPrintSettings = () => {
+    return new Promise((resolve, reject) => {
+        db.all("SELECT * FROM settings WHERE key IN ('company', 'ticket', 'system')", (err, rows) => {
+            if (err) resolve({}); // Fail safe
+            else {
+                const settings = {};
+                rows.forEach(row => {
+                    try { settings[row.key] = JSON.parse(row.value); } catch (_) { settings[row.key] = row.value; }
+                });
+                resolve(settings);
+            }
+        });
+    });
+};
+
+// Update the POST handler to use this:
+app.post('/api/print/ticket', authenticateToken, async (req, res) => {
+    const { saleId, data } = req.body;
+
+    // Fetch settings first
+    const settings = await getPrintSettings();
+    const company = settings.company || {};
+    const ticketSettings = settings.ticket || {};
+    const systemSettings = settings.system || {};
+    const printerName = systemSettings.printerName; // Optional override
+
+    // Si envían saleId, buscamos la venta en BD
+    if (saleId) {
+        const query = `
+            SELECT s.id, s.date, s.total, s.payment_method, s.cashier,
+                   si.quantity, si.price, si.product_name, p.name as catalog_name
+            FROM sales s
+            LEFT JOIN sale_items si ON s.id = si.sale_id
+            LEFT JOIN products p ON si.product_id = p.id
+            WHERE s.id = ?
+        `;
+        db.all(query, [saleId], async (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows || rows.length === 0) return res.status(404).json({ error: "Sale not found" });
+
+            // Reconstruct sale object
+            const saleDate = new Date(rows[0].date);
+            const sale = {
+                ticket_id: rows[0].id,
+                fecha_ingreso: saleDate.toLocaleDateString(),
+                hora_ingreso: saleDate.toLocaleTimeString(),
+                total: rows[0].total,
+                items: rows.map(r => ({
+                    name: r.product_name || r.catalog_name,
+                    qty: r.quantity,
+                    price: r.price
+                }))
+            };
+
+            // Map fields with Settings
+            const printData = {
+                ticket_id: sale.ticket_id,
+                fecha_ingreso: sale.fecha_ingreso,
+                hora_ingreso: sale.hora_ingreso,
+                items: sale.items,
+                total: sale.total,
+                tipo_vehiculo: 'Cliente General',
+                patente: sale.ticket_id,
+
+                // Inject Company Info
+                company: {
+                    name: company.fantasyName || company.name || 'TecniWorld',
+                    legalName: company.name,
+                    address: company.address,
+                    rut: company.rut,
+                    phone: company.phone
+                },
+                footer: ticketSettings.footerText || 'Gracias por su preferencia',
+                printerName: printerName // Pass to printer service
+            };
+
+            try {
+                await printerService.printTicket(printData);
+                res.json({ message: "Imprimiendo ticket..." });
+            } catch (e) {
+                console.error("Print Error:", e);
+                res.status(500).json({ error: "Error de impresión: " + e.message });
+            }
+        });
+    } else if (data) {
+        // Direct print data (custom)
+        printerService.printTicket(data)
+            .then(() => res.json({ message: "Imprimiendo..." }))
+            .catch(e => res.status(500).json({ error: e.message }));
+    } else {
+        res.status(400).json({ error: "Missing saleId or data" });
+    }
+});
+
 // 4. Weekly Auto-Backup (Every Sunday at 3 AM)
 cron.schedule('0 3 * * 0', () => {
     console.log('Running weekly auto-backup...');
@@ -687,6 +799,22 @@ app.post('/api/database/clear', authenticateToken, authorizeRole('ADMIN'), (req,
 
 // --- AUTHENTICATION & USERS ---
 // Middleware moved to top
+
+// --- GRACEFUL SHUTDOWN ---
+const gracefulShutdown = (signal) => {
+    console.log(`[SERVER] Received ${signal}. Closing database connection...`);
+    db.close((err) => {
+        if (err) {
+            console.error('[SERVER] Error closing database:', err.message);
+            process.exit(1);
+        }
+        console.log('[SERVER] Database connection closed.');
+        process.exit(0);
+    });
+};
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 
 // LOGIN
@@ -774,7 +902,20 @@ app.put('/api/users/:id', authenticateToken, authorizeRole('ADMIN'), (req, res) 
     });
 });
 
+// --- SERVING FRONTEND FOR NETWORK/TAILSCALE ACCESS ---
+const distPath = path.join(__dirname, '../dist');
+
+if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+    // SPA Catch-all
+    app.get('*', (req, res, next) => {
+        if (req.path.startsWith('/api')) return next();
+        res.sendFile(path.join(distPath, 'index.html'));
+    });
+}
+
 // --- INICIAR SERVIDOR ---
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+// Listen on 0.0.0.0 to allow external access (Tailscale, LAN)
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
 });

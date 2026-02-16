@@ -270,8 +270,9 @@ function AppContent() {
         onOpenRegister={(amount) => {
           openCashRegister(amount).catch(err => showModal(err.message, "Error", "error"));
         }}
-        onCloseRegister={(cash, obs) => {
-          closeCashRegister(cash, obs).catch(err => showModal(err.message, "Error", "error"));
+        onCloseRegister={async (cash, obs) => {
+          await closeCashRegister(cash, obs).catch(err => showModal(err.message, "Error", "error"));
+          logout(); // Auto-logout after closing register
         }}
         inventory={inventory}
         cartItems={cartItems}

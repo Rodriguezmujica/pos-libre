@@ -268,5 +268,24 @@ export const api = {
             throw new Error(data.error || 'Database clear failed');
         }
         return response.json();
+    },
+
+    // Printing
+    getPrinters: async () => {
+        const response = await fetch(`${API_URL}/printers`, { headers: getHeaders() });
+        return response.json();
+    },
+
+    printTicket: async (saleId, data) => {
+        const response = await fetch(`${API_URL}/print/ticket`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ saleId, data })
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Print failed');
+        }
+        return response.json();
     }
 };

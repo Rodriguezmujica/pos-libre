@@ -573,6 +573,31 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
                                 </div>
                             </div>
 
+                            <div className={styles.settingCard}>
+                                <div className={styles.settingHeader}>
+                                    <div className={styles.settingIcon} style={{ background: '#f3e5f5', color: '#7b1fa2' }}>
+                                        <Settings size={24} />
+                                    </div>
+                                    <div>
+                                        <h3>Impresora</h3>
+                                        <p>Nombre exacto de la impresora en Windows.</p>
+                                    </div>
+                                </div>
+                                <div className={styles.settingBody}>
+                                    <label>Nombre del Dispositivo</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: POS-58 (copy 1)"
+                                        value={localSettings.system.printerName || ''}
+                                        onChange={(e) => handleChange('system', 'printerName', e.target.value)}
+                                        className={styles.input}
+                                    />
+                                    <small style={{ color: '#666', display: 'block', marginTop: 4 }}>
+                                        Debe coincidir exactamente con "Dispositivos e impresoras".
+                                    </small>
+                                </div>
+                            </div>
+
                             <div className={styles.actions}>
                                 <button className={styles.saveBtn} onClick={handleSaveSystem}>
                                     <Save size={18} /> Guardar Cambios

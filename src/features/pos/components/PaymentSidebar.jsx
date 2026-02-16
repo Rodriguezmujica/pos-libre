@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Banknote, CreditCard, Smartphone, CheckCircle2, Box, FileText, Settings, LogOut, ArrowLeftRight, Lock } from 'lucide-react';
 import styles from '../../../styles/PaymentSidebar.module.css';
 
-const PaymentSidebar = ({ onShowReport, onShowInventory, onShowSettings, onCompleteSale, onLogout, user, onCloseRegister, selectedMethod: controlledMethod, onPaymentMethodChange }) => {
+const PaymentSidebar = ({ onShowReport, onShowInventory, onShowSettings, onCompleteSale, onLogout, user, onCloseRegister, onOpenRegister, cashRegister, selectedMethod: controlledMethod, onPaymentMethodChange }) => {
     const [internalMethod, setInternalMethod] = useState('debit');
     const selectedMethod = controlledMethod !== undefined ? controlledMethod : internalMethod;
     const setSelectedMethod = (val) => {
@@ -12,6 +12,8 @@ const PaymentSidebar = ({ onShowReport, onShowInventory, onShowSettings, onCompl
             setInternalMethod(val);
         }
     };
+
+    const isRegisterOpen = cashRegister?.isOpen;
 
     const paymentMethods = [
         { id: 'cash', name: 'Efectivo', icon: Banknote, color: '#34a853', bgColor: '#e6f4ea' },
@@ -30,6 +32,8 @@ const PaymentSidebar = ({ onShowReport, onShowInventory, onShowSettings, onCompl
                         key={method.id}
                         className={`${styles.paymentCard} ${selectedMethod === method.id ? styles.selected : ''}`}
                         onClick={() => setSelectedMethod(method.id)}
+                        disabled={!isRegisterOpen}
+                        style={{ opacity: !isRegisterOpen ? 0.5 : 1 }}
                     >
                         <div className={styles.paymentIconWrapper} style={{ color: method.color, backgroundColor: method.bgColor }}>
                             <method.icon size={24} />
@@ -46,13 +50,24 @@ const PaymentSidebar = ({ onShowReport, onShowInventory, onShowSettings, onCompl
 
             <div className={styles.spacer}></div>
 
-            <button
-                className={styles.completeSaleBtn}
-                onClick={() => onCompleteSale(selectedMethod)}
-            >
-                <span className={styles.completeSaleText}>COMPLETAR VENTA</span>
-                <span className={styles.completeSaleSubtext}>CONFIRMAR E IMPRIMIR RECIBO (F12)</span>
-            </button>
+            {isRegisterOpen ? (
+                <button
+                    className={styles.completeSaleBtn}
+                    onClick={() => onCompleteSale(selectedMethod)}
+                >
+                    <span className={styles.completeSaleText}>COMPLETAR VENTA</span>
+                    <span className={styles.completeSaleSubtext}>CONFIRMAR E IMPRIMIR RECIBO (F12)</span>
+                </button>
+            ) : (
+                <button
+                    className={styles.completeSaleBtn}
+                    onClick={onOpenRegister}
+                    style={{ background: '#5f6368' }}
+                >
+                    <span className={styles.completeSaleText}>CAJA CERRADA</span>
+                    <span className={styles.completeSaleSubtext}>ABRIR CAJA PARA VENDER</span>
+                </button>
+            )}
 
             <div className={styles.actionsGrid}>
                 {user?.role === 'ADMIN' && (
@@ -71,10 +86,19 @@ const PaymentSidebar = ({ onShowReport, onShowInventory, onShowSettings, onCompl
                         <span>AJUSTES</span>
                     </button>
                 )}
-                <button className={`${styles.actionBtn} ${styles.logoutBtn}`} onClick={onCloseRegister} style={{ backgroundColor: '#fce8e6', color: '#d93025' }}>
-                    <Lock size={20} />
-                    <span>CERRAR CAJA</span>
-                </button>
+
+                {isRegisterOpen ? (
+                    <button className={`${styles.actionBtn} ${styles.logoutBtn}`} onClick={onCloseRegister} style={{ backgroundColor: '#fce8e6', color: '#d93025' }}>
+                        <Lock size={20} />
+                        <span>CERRAR CAJA</span>
+                    </button>
+                ) : (
+                    <button className={`${styles.actionBtn}`} onClick={onOpenRegister} style={{ backgroundColor: '#e6f4ea', color: '#1e8e3e' }}>
+                        <Lock size={20} />
+                        <span>ABRIR CAJA</span>
+                    </button>
+                )}
+
                 <button className={`${styles.actionBtn} ${styles.logoutBtn}`} onClick={onLogout}>
                     <LogOut size={20} />
                     <span>CERRAR SESIÓN</span>

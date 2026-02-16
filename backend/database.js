@@ -37,44 +37,61 @@ const seedData = [
 
 const initializeDatabase = () => {
     db.serialize(() => {
-        // Products Table
-        db.run(`CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            price REAL NOT NULL,
-            cost REAL DEFAULT 0,
-            stock INTEGER DEFAULT 0,
-            category TEXT,
-            barcode TEXT UNIQUE,
-            min_stock INTEGER DEFAULT 5,
-            location TEXT,
-            image TEXT,
-            keywords TEXT,
-            variants TEXT
+        // 1. Ensure Settings Table Exists FIRST to track seeding status
+        db.run(`CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
         )`, (err) => {
-            if (!err) {
-                // Migration: Add columns if they don't exist (for existing DBs)
-                const columnsToAdd = ['location', 'image', 'keywords', 'variants', 'total_sold'];
-                columnsToAdd.forEach(col => {
-                    const def = col === 'total_sold' ? 'INTEGER DEFAULT 0' : 'TEXT';
-                    db.run(`ALTER TABLE products ADD COLUMN ${col} ${def}`, (err) => {
-                        // Ignore error if column already exists
-                    });
-                });
+            if (err) console.error("Error creating settings table:", err);
 
-                // Check if empty and seed
-                db.get("SELECT count(*) as count FROM products", (err, row) => {
-                    if (!err && row.count === 0) {
-                        console.log("Seeding products...");
-                        const stmt = db.prepare("INSERT INTO products (name, price, cost, stock, category, barcode, min_stock, location, image, keywords, variants) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
-                        seedData.forEach(p => {
-                            stmt.run(p.name, p.price, p.cost, p.stock, p.category, p.barcode, p.min_stock, '', null, '[]', p.variants ? JSON.stringify(p.variants) : null);
-                        });
-                        stmt.finalize();
-                        console.log("Seeding completed.");
-                    }
-                });
-            }
+            // 2. Create Products Table
+            db.run(`CREATE TABLE IF NOT EXISTS products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                price REAL NOT NULL,
+                cost REAL DEFAULT 0,
+                stock INTEGER DEFAULT 0,
+                category TEXT,
+                barcode TEXT UNIQUE,
+                min_stock INTEGER DEFAULT 5,
+                location TEXT,
+                image TEXT,
+                keywords TEXT,
+                variants TEXT,
+                total_sold INTEGER DEFAULT 0
+            )`, (err) => {
+                if (!err) {
+                    // SEEDING LOGIC WITH FLAG CHECK
+                    db.get("SELECT value FROM settings WHERE key = 'db_seeded'", (err, row) => {
+                        const isSeeded = row && row.value === 'true';
+
+                        if (!isSeeded) {
+                            // Check if empty (only seed if truly empty AND never seeded before)
+                            db.get("SELECT count(*) as count FROM products", (err, row) => {
+                                if (!err && row.count === 0) {
+                                    console.log("Seeding products (First Run)...");
+                                    const stmt = db.prepare("INSERT INTO products (name, price, cost, stock, category, barcode, min_stock, location, image, keywords, variants) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+                                    seedData.forEach(p => {
+                                        stmt.run(p.name, p.price, p.cost, p.stock, p.category, p.barcode, p.min_stock, '', null, '[]', p.variants ? JSON.stringify(p.variants) : null);
+                                    });
+                                    stmt.finalize();
+
+                                    // Mark as seeded
+                                    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('db_seeded', 'true')", (err) => {
+                                        if (err) console.error("Error setting db_seeded flag:", err);
+                                        else console.log("Seeding completed and flag set.");
+                                    });
+                                } else if (!err && row.count > 0) {
+                                    // It has products but flag wasn't set (legacy db?), set flag to avoid future re-seed if they delete all
+                                    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('db_seeded', 'true')");
+                                }
+                            });
+                        } else {
+                            console.log("Database already seeded. Skipping seed check.");
+                        }
+                    });
+                }
+            });
         });
 
         // Sales Table
@@ -133,11 +150,8 @@ const initializeDatabase = () => {
             observations TEXT
         )`);
 
-        // Settings Table
-        db.run(`CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL
-        )`);
+        // Settings Table (Created above, leaving this commented or removed to avoid redundancy/errors if async logic overlaps)
+        // db.run(...) - Already handled in step 1
 
         // Users Table
         db.run(`CREATE TABLE IF NOT EXISTS users (

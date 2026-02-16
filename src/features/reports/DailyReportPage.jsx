@@ -125,8 +125,15 @@ const DailyReportPage = ({ onBack, sales = [], user, onVoidSale, inventory = [] 
     const [isVoidModalOpen, setIsVoidModalOpen] = useState(false);
     const [voidReason, setVoidReason] = useState('');
 
-    const handlePrint = () => {
-        window.print();
+    const handlePrint = async () => {
+        if (!currentTicket) return;
+        try {
+            await api.printTicket(currentTicket.id);
+            showModal("Ticket enviado a la impresora", "Éxito");
+        } catch (error) {
+            console.error("Print error:", error);
+            showModal("Error al imprimir: " + error.message, "Error", "error");
+        }
     };
 
     const handleVoidClick = () => {

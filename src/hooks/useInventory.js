@@ -18,8 +18,8 @@ export const useInventory = () => {
         } catch (err) {
             console.error("Error loading inventory:", err);
             setError(err);
-            // Fallback
-            setInventory(inventoryProducts);
+            // Fallback - REMOVED to avoid ghost data
+            setInventory([]);
         } finally {
             setLoading(false);
         }

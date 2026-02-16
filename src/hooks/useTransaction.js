@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSales } from './useSales';
+import { api } from '../services/api';
 
 export function useTransaction(cart, cashRegister, user, refreshInventory) {
     // cart = { cartItems, total, clearCart }
@@ -58,10 +59,20 @@ export function useTransaction(cart, cashRegister, user, refreshInventory) {
             await refreshInventory();
             cart.clearCart();
 
+            // Auto-Print Ticket
+            try {
+                // We use non-blocking print request to not delay UI feedback too much, 
+                // but usually better to await slightly or fire and forget.
+                // Fire and forget:
+                api.printTicket(result.saleId).catch(err => console.error("Auto-print error:", err));
+            } catch (printErr) {
+                console.warn("Could not initiate print:", printErr);
+            }
+
             const ticketFooter = settings?.ticket?.footerText || '';
             const fantasyName = settings?.company?.fantasyName || settings?.company?.name || '';
 
-            const successMsg = `Venta completada con éxito!\nID: ${result.saleId}\nTotal: $${cart.total.toLocaleString('es-CL', { maximumFractionDigits: 0 })}\n\n--- TICKET ---\n${fantasyName}\n${ticketFooter}`;
+            const successMsg = `Venta completada con éxito!\nID: ${result.saleId}\nTotal: $${cart.total.toLocaleString('es-CL', { maximumFractionDigits: 0 })}\n\n(Ticket enviado a impreso)\n\n--- TICKET ---\n${fantasyName}\n${ticketFooter}`;
 
             setTransactionState(prev => ({
                 ...prev,

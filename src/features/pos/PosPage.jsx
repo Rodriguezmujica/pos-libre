@@ -29,12 +29,13 @@ const PosPage = ({
     onOpenRegister,
     onCloseRegister
 }) => {
-    const [isCloseRegisterModalOpen, setIsCloseRegisterModalOpen] = React.useState(false);
+    const [isOpenRegisterModalOpen, setIsOpenRegisterModalOpen] = React.useState(false); // Manual Open Modal
+    const [isCloseRegisterModalOpen, setIsCloseRegisterModalOpen] = React.useState(false); // Manual Close Modal
     const [isCustomItemModalOpen, setIsCustomItemModalOpen] = React.useState(false); // Custom Item Modal
     const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState('debit');
 
-    // Force Open Modal if cashRegister is closed
-    const showOpenModal = cashRegister && !cashRegister.isOpen;
+    // Force Open Modal logic REMOVED to allow sidebar interaction
+    // const showOpenModal = cashRegister && !cashRegister.isOpen;
 
     const handleAddCustomItem = (item) => {
         const customItem = {
@@ -71,10 +72,13 @@ const PosPage = ({
                     <>
                         {exchangeModal}
                         <CashRegisterModal
-                            isOpen={showOpenModal}
+                            isOpen={isOpenRegisterModalOpen}
                             mode="OPEN"
-                            onConfirm={onOpenRegister}
-                            onClose={() => { }} // Cannot close open modal
+                            onConfirm={async (amount) => {
+                                await onOpenRegister(amount);
+                                setIsOpenRegisterModalOpen(false);
+                            }}
+                            onClose={() => setIsOpenRegisterModalOpen(false)} // Allow cancelling
                             cashRegister={cashRegister}
                         />
                         <CashRegisterModal
@@ -120,6 +124,8 @@ const PosPage = ({
                         onCompleteSale={onCompleteSale}
                         onLogout={logout}
                         user={user}
+                        cashRegister={cashRegister}
+                        onOpenRegister={() => setIsOpenRegisterModalOpen(true)}
                         onCloseRegister={() => setIsCloseRegisterModalOpen(true)}
                         selectedMethod={selectedPaymentMethod}
                         onPaymentMethodChange={setSelectedPaymentMethod}
