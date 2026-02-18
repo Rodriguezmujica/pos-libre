@@ -36,5 +36,6 @@ export const systemSettings = {
     lowStockAlert: true,
     autoBackup: false,
     minStock: 5,
-    taxRate: 19
+    taxRate: 19,
+    printerName: 'POS-58C'
 };

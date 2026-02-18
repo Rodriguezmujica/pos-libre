@@ -49,10 +49,14 @@ function AppContent() {
   } = useInventory();
 
   // Extract tax rate safely
+  // If "Tax Included" is checked, we treat it as ENABLED and INCLUDED.
+  // If unchecked, we treat it as DISABLED (Rate 0).
+  // This ensures the Total Price is always the Input Price (e.g. 2000 -> 2000).
   const isTaxEnabled = settings?.system?.taxIncluded ?? true;
-  const taxRate = isTaxEnabled && settings?.system?.taxRate !== undefined ? settings.system.taxRate : 0;
+  const taxRate = isTaxEnabled ? (settings?.system?.taxRate || 19) : 0;
+  const isTaxIncluded = true; // Always treat as included so we don't add on top if enabled
 
-  const cartHook = useCart(taxRate); // Get the whole hook object to pass to useTransaction
+  const cartHook = useCart(taxRate, isTaxIncluded); // Pass both to hook
   const {
     cartItems,
     addToCart,
@@ -178,9 +182,9 @@ function AppContent() {
     }
   };
 
-  const handleExecuteSaleWrapper = async () => {
+  const handleExecuteSaleWrapper = async (printTicket) => {
     try {
-      await transactionHook.executeSale(settings);
+      await transactionHook.executeSale(settings, printTicket);
       // Success message handled by effect below
     } catch (err) {
       if (!transactionHook.transactionState.error) {

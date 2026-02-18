@@ -39,7 +39,7 @@ export function useTransaction(cart, cashRegister, user, refreshInventory) {
         }));
     };
 
-    const executeSale = async (settings) => {
+    const executeSale = async (settings, printTicket = true) => {
         setTransactionState(prev => ({ ...prev, loading: true, isConfirmationOpen: false, error: null }));
 
         try {
@@ -60,13 +60,15 @@ export function useTransaction(cart, cashRegister, user, refreshInventory) {
             cart.clearCart();
 
             // Auto-Print Ticket
-            try {
-                // We use non-blocking print request to not delay UI feedback too much, 
-                // but usually better to await slightly or fire and forget.
-                // Fire and forget:
-                api.printTicket(result.saleId).catch(err => console.error("Auto-print error:", err));
-            } catch (printErr) {
-                console.warn("Could not initiate print:", printErr);
+            if (printTicket) {
+                try {
+                    // We use non-blocking print request to not delay UI feedback too much, 
+                    // but usually better to await slightly or fire and forget.
+                    // Fire and forget:
+                    api.printTicket(result.saleId).catch(err => console.error("Auto-print error:", err));
+                } catch (printErr) {
+                    console.warn("Could not initiate print:", printErr);
+                }
             }
 
             const ticketFooter = settings?.ticket?.footerText || '';

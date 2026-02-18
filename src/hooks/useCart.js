@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export const useCart = (taxRate = 19) => {
+export const useCart = (taxRate = 19, taxIncluded = true) => {
     const [cartItems, setCartItems] = useState([]);
 
     const addToCart = (product) => {
@@ -39,9 +39,27 @@ export const useCart = (taxRate = 19) => {
         setCartItems([]);
     };
 
-    const subtotal = cartItems.reduce((sum, item) => sum + item.subtotal, 0);
-    const tax = subtotal * (taxRate / 100);
-    const total = subtotal + tax;
+    // Calculate Totals based on Tax Setting
+    const cartSubtotal = cartItems.reduce((sum, item) => sum + item.subtotal, 0);
+
+    let subtotal = 0;
+    let tax = 0;
+    let total = 0;
+
+    if (taxIncluded) {
+        // Tax IS included in the price (e.g. Price 1000 is Final)
+        total = cartSubtotal;
+        // Calculate tax backwards: Total = Base * (1 + Rate) => Base = Total / (1 + Rate)
+        // Tax = Total - Base
+        const baseAmount = total / (1 + (taxRate / 100));
+        tax = total - baseAmount;
+        subtotal = baseAmount;
+    } else {
+        // Tax is NOT included (Add on top)
+        subtotal = cartSubtotal;
+        tax = subtotal * (taxRate / 100);
+        total = subtotal + tax;
+    }
 
     return {
         cartItems,

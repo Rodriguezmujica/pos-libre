@@ -587,7 +587,7 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
                                     <label>Nombre del Dispositivo</label>
                                     <input
                                         type="text"
-                                        placeholder="Ej: POS-58 (copy 1)"
+                                        placeholder="Ej: POS-58C"
                                         value={localSettings.system.printerName || ''}
                                         onChange={(e) => handleChange('system', 'printerName', e.target.value)}
                                         className={styles.input}

@@ -3,6 +3,15 @@ import { AlertCircle, Check, X } from 'lucide-react';
 import styles from '../../styles/SettingsView.module.css';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, total, method }) => {
+    const [printTicket, setPrintTicket] = React.useState(true);
+
+    // Reset printTicket to true when modal opens
+    React.useEffect(() => {
+        if (isOpen) {
+            setPrintTicket(true);
+        }
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     const methodLabel = {
@@ -37,6 +46,19 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, total, method }) => {
                         </div>
                     </div>
 
+                    <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        <input
+                            type="checkbox"
+                            id="printTicket"
+                            checked={printTicket}
+                            onChange={(e) => setPrintTicket(e.target.checked)}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <label htmlFor="printTicket" style={{ cursor: 'pointer', fontSize: '14px', color: '#202124', userSelect: 'none' }}>
+                            Imprimir comprobante (Ticket)
+                        </label>
+                    </div>
+
                     <p style={{ margin: 0, color: '#5f6368', fontSize: 14 }}>
                         ¿Estás seguro de que deseas procesar esta venta?
                     </p>
@@ -52,7 +74,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, total, method }) => {
                     </button>
                     <button
                         className={styles.saveBtn}
-                        onClick={onConfirm}
+                        onClick={() => onConfirm(printTicket)}
                         style={{ minWidth: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#1a73e8' }}
                     >
                         <Check size={16} /> Confirmar

@@ -6,7 +6,7 @@ const EscPosEncoder = require('./escpos-encoder');
 
 class PrinterService {
     constructor() {
-        this.printerName = 'POS-58 (copy 1)';
+        this.printerName = 'POS-58C';
         this.tmpDir = os.tmpdir();
     }
 
