@@ -17,7 +17,7 @@ const PaymentSidebar = ({ onShowReport, onShowInventory, onShowSettings, onCompl
 
     const paymentMethods = [
         { id: 'cash', name: 'Efectivo', icon: Banknote, color: '#34a853', bgColor: '#e6f4ea' },
-        { id: 'debit', name: 'Débito / NFC', icon: Smartphone, color: '#a142f4', bgColor: '#f3e8fd' },
+        { id: 'debit', name: 'Tarjeta / Bizum', icon: Smartphone, color: '#a142f4', bgColor: '#f3e8fd' },
         { id: 'credit', name: 'Tarjeta de Crédito', icon: CreditCard, color: '#4285f4', bgColor: '#e8f0fe' },
         { id: 'exchange', name: 'Cambio', icon: ArrowLeftRight, color: '#fbbc04', bgColor: '#fef7e0' },
     ];

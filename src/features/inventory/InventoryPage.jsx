@@ -8,6 +8,7 @@ import styles from '../../styles/InventoryManagement.module.css';
 import { categories } from '../../data/mockInventory';
 import SuccessModal from '../../components/common/SuccessModal';
 import NotificationBell from '../../components/common/NotificationBell';
+import { formatMoney, CURRENCY_SYMBOL } from '../../utils/formatMoney';
 
 const InventoryPage = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, onDeleteProduct, settings, targetProductId }) => {
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -121,23 +122,26 @@ const InventoryPage = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, 
             setLocalCategories(prev => [...prev, editCategory]);
         }
 
+        const cleanName = editName.trim();
+        const cleanBarcode = editBarcode.trim() || null;
+
         const productData = {
-            name: editName,
+            name: cleanName,
             category: editCategory,
             price: parseFloat(editPrice) || 0,
             cost: parseFloat(editCost) || 0,
             stock: parseInt(editStock) || 0,
-            barcode: editBarcode,
+            barcode: cleanBarcode,
             keywords: editKeywords,
-            variants: editVariants,
-            location: editLocation,
+            variants: editVariants.length > 0 ? editVariants : null,
+            location: editLocation.trim(),
             image: editImage
         };
 
 
         try {
             if (isCreating) {
-                if (!editName) {
+                if (!cleanName) {
                     setModalState({ isOpen: true, title: 'Error', message: 'El nombre es obligatorio', type: 'error' });
                     return;
                 }
@@ -145,7 +149,7 @@ const InventoryPage = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, 
                 setModalState({
                     isOpen: true,
                     title: 'Producto Creado',
-                    message: `El producto "${editName}" se ha creado correctamente.`,
+                    message: `El producto "${cleanName}" se ha creado correctamente.`,
                     type: 'success'
                 });
                 setIsCreating(false);
@@ -155,12 +159,18 @@ const InventoryPage = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, 
                 setModalState({
                     isOpen: true,
                     title: 'Producto Actualizado',
-                    message: `Los datos del producto "${editName}" se han guardado correctamente.`,
+                    message: `Los datos del producto "${cleanName}" se han guardado correctamente.`,
                     type: 'success'
                 });
             }
         } catch (error) {
-            setModalState({ isOpen: true, title: 'Error', message: 'Hubo un error al guardar.', type: 'error' });
+            console.error('Error al guardar producto:', error);
+            setModalState({
+                isOpen: true,
+                title: 'Error al Guardar',
+                message: error.message || 'Hubo un error al guardar el producto.',
+                type: 'error'
+            });
         }
     };
 
@@ -176,7 +186,13 @@ const InventoryPage = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, 
             setDeleteId(null);
             setSelectedProduct(null); // Clear selection
         } catch (error) {
-            setModalState({ isOpen: true, title: 'Error', message: 'No se pudo eliminar el producto.', type: 'error' });
+            console.error('Error al eliminar producto:', error);
+            setModalState({
+                isOpen: true,
+                title: 'Error',
+                message: error.message || 'No se pudo eliminar el producto.',
+                type: 'error'
+            });
         }
     };
 
@@ -215,11 +231,12 @@ const InventoryPage = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, 
 
     const getCategoryStyle = (cat) => {
         switch (cat) {
-            case 'CELULAR': return styles.catCelular;
-            case 'CÁMARA': return styles.catCamara;
-            case 'COMPUTACIÓN': return styles.catComputacion;
-            case 'ACCESORIOS': return styles.catAccesorios;
-            default: return styles.catAccesorios;
+            case 'COMIDA': return styles.catComida;
+            case 'BEBIDAS': return styles.catBebidas;
+            case 'SERVICIOS': return styles.catServicios;
+            case 'VARIOS': return styles.catVarios;
+            case 'GENERAL': return styles.catGeneral;
+            default: return styles.catGeneral;
         }
     };
 
@@ -345,7 +362,7 @@ const InventoryPage = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, 
                                     {product.stock}
                                 </div>
                                 <div className={styles.price}>
-                                    ${product.price ? product.price.toLocaleString('es-CL', { maximumFractionDigits: 0 }) : '0'}
+                                    {product.price ? formatMoney(product.price) : formatMoney(0)}
                                 </div>
                             </div>
                         ))}
@@ -471,7 +488,7 @@ const InventoryPage = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, 
                                         <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'white', padding: 8, borderRadius: 4, border: '1px solid #dadce0' }}>
                                             <div style={{ flex: 2, fontWeight: 500 }}>{v.name}</div>
                                             <div style={{ width: 80, fontSize: 13 }}>Stock: {v.stock}</div>
-                                            <div style={{ width: 100, fontSize: 13, fontWeight: 'bold' }}>${v.price ? v.price.toLocaleString() : editPrice}</div>
+                                            <div style={{ width: 100, fontSize: 13, fontWeight: 'bold' }}>{v.price ? formatMoney(v.price) : formatMoney(editPrice)}</div>
                                             <button
                                                 onClick={() => removeVariant(i)}
                                                 style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#d93025' }}
@@ -563,7 +580,7 @@ const InventoryPage = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, 
                                 <div className={styles.formGroup}>
                                     <label className={styles.label}>PRECIO DE COMPRA</label>
                                     <div style={{ position: 'relative' }}>
-                                        <span style={{ position: 'absolute', left: 12, top: 10, color: '#9aa0a6' }}>$</span>
+                                        <span style={{ position: 'absolute', left: 12, top: 10, color: '#9aa0a6' }}>{CURRENCY_SYMBOL}</span>
                                         <input
                                             type="text"
                                             className={styles.input}
@@ -576,7 +593,7 @@ const InventoryPage = ({ onBack, inventory = [], onUpdateProduct, onAddProduct, 
                                 <div className={styles.formGroup}>
                                     <label className={styles.label}>PRECIO DE VENTA</label>
                                     <div style={{ position: 'relative' }}>
-                                        <span style={{ position: 'absolute', left: 12, top: 10, color: '#202124', fontWeight: 'bold' }}>$</span>
+                                        <span style={{ position: 'absolute', left: 12, top: 10, color: '#202124', fontWeight: 'bold' }}>{CURRENCY_SYMBOL}</span>
                                         <input
                                             type="text"
                                             className={styles.input}

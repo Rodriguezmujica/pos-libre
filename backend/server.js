@@ -26,17 +26,21 @@ app.use(express.json());
 // --- AUTH DEPENDENCIES ---
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const SECRET_KEY = 'tecniworld_secret_key_change_me'; // In prod, use env var
+const SECRET_KEY = 'pos_secret_key_change_me'; // In prod, use env var
 
 // --- MIDDLEWARE ---
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
-    if (token == null) return res.sendStatus(401);
+    if (token == null) {
+        return res.status(401).json({ error: 'No autorizado: falta token' });
+    }
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
-        if (err) return res.sendStatus(403);
+        if (err) {
+            return res.status(403).json({ error: 'Token inválido o expirado' });
+        }
         req.user = user;
         next();
     });
@@ -47,7 +51,7 @@ const authorizeRole = (role) => {
         if (req.user && req.user.role === role) {
             next();
         } else {
-            res.sendStatus(403);
+            res.status(403).json({ error: `Prohibido: requiere rol ${role}` });
         }
     };
 };
@@ -61,11 +65,25 @@ app.get('/api/products', (req, res) => {
             res.status(400).json({ "error": err.message });
             return;
         }
-        const products = rows.map(p => ({
-            ...p,
-            keywords: p.keywords ? JSON.parse(p.keywords) : [],
-            variants: p.variants ? JSON.parse(p.variants) : null
-        }));
+        const products = rows.map(p => {
+            let parsedKeywords = [];
+            let parsedVariants = null;
+            try {
+                if (p.keywords) parsedKeywords = JSON.parse(p.keywords);
+            } catch (_) { parsedKeywords = []; }
+            try {
+                if (p.variants) {
+                    const parsed = JSON.parse(p.variants);
+                    parsedVariants = (Array.isArray(parsed) && parsed.length > 0) ? parsed : null;
+                }
+            } catch (_) { parsedVariants = null; }
+
+            return {
+                ...p,
+                keywords: Array.isArray(parsedKeywords) ? parsedKeywords : [],
+                variants: parsedVariants
+            };
+        });
         res.json({
             "message": "success",
             "data": products
@@ -75,57 +93,115 @@ app.get('/api/products', (req, res) => {
 
 app.post('/api/products', (req, res) => {
     const { name, price, cost, stock, category, barcode, min_stock, location, image, keywords, variants } = req.body;
-    const sql = 'INSERT INTO products (name, price, cost, stock, category, barcode, min_stock, location, image, keywords, variants) VALUES (?,?,?,?,?,?,?,?,?,?,?)';
-    const params = [name, price, cost, stock, category, barcode, min_stock, location, image, JSON.stringify(keywords), variants ? JSON.stringify(variants) : null];
 
-    db.run(sql, params, function (err, result) {
+    if (!name || !name.trim()) {
+        return res.status(400).json({ error: "El nombre del producto es obligatorio." });
+    }
+
+    // SQLite UNIQUE treats multiple NULLs as unique, but multiple '' (empty strings) as duplicate!
+    const cleanBarcode = (barcode && typeof barcode === 'string' && barcode.trim() !== '')
+        ? barcode.trim()
+        : null;
+
+    const cleanVariants = (Array.isArray(variants) && variants.length > 0)
+        ? JSON.stringify(variants)
+        : null;
+
+    const cleanKeywords = Array.isArray(keywords)
+        ? JSON.stringify(keywords)
+        : (keywords ? JSON.stringify([keywords]) : '[]');
+
+    const cleanMinStock = (min_stock !== undefined && min_stock !== null && min_stock !== '')
+        ? Number(min_stock)
+        : 5;
+
+    const sql = 'INSERT INTO products (name, price, cost, stock, category, barcode, min_stock, location, image, keywords, variants) VALUES (?,?,?,?,?,?,?,?,?,?,?)';
+    const params = [
+        name.trim(),
+        Number(price) || 0,
+        Number(cost) || 0,
+        Number(stock) || 0,
+        category || 'GENERAL',
+        cleanBarcode,
+        cleanMinStock,
+        location ? location.trim() : '',
+        image || null,
+        cleanKeywords,
+        cleanVariants
+    ];
+
+    db.run(sql, params, function (err) {
         if (err) {
-            res.status(400).json({ "error": err.message });
-            return;
+            console.error('[POST /api/products] Error:', err.message);
+            if (err.message.includes('UNIQUE constraint failed: products.barcode')) {
+                return res.status(400).json({ error: `El código de barras "${barcode}" ya está registrado en otro producto.` });
+            }
+            return res.status(400).json({ error: err.message });
         }
         res.json({
-            "message": "success",
-            "data": req.body,
-            "id": this.lastID
+            message: "success",
+            data: { ...req.body, id: this.lastID, barcode: cleanBarcode },
+            id: this.lastID
         });
     });
 });
 
 app.put('/api/products/:id', (req, res) => {
     const { name, price, cost, stock, category, barcode, min_stock, location, image, keywords, variants } = req.body;
-    const sql = `UPDATE products set
-name = COALESCE(?, name),
-    price = COALESCE(?, price),
-    cost = COALESCE(?, cost),
-    stock = COALESCE(?, stock),
-    category = COALESCE(?, category),
-    barcode = COALESCE(?, barcode),
-    min_stock = COALESCE(?, min_stock),
-    location = COALESCE(?, location),
-    image = COALESCE(?, image),
-    keywords = COALESCE(?, keywords),
-    variants = COALESCE(?, variants)
-           WHERE id = ? `;
+    const productId = req.params.id;
 
-    // Keywords and Variants must be stringified if present
-    const keywordsStr = keywords ? JSON.stringify(keywords) : null;
-    const variantsStr = variants ? JSON.stringify(variants) : null;
+    db.get('SELECT * FROM products WHERE id = ?', [productId], (err, existing) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!existing) return res.status(404).json({ error: 'Producto no encontrado' });
 
-    console.log(`[PUT Product ${req.params.id}] Updating...`);
-    console.log("Variants received:", variants);
-    console.log("VariantesStr len:", variantsStr ? variantsStr.length : 'null');
-    console.log("Params:", [name, price, cost, stock, category, barcode, min_stock, location, image, keywordsStr, variantsStr, req.params.id]);
+        const cleanBarcode = barcode !== undefined
+            ? ((barcode && typeof barcode === 'string' && barcode.trim() !== '') ? barcode.trim() : null)
+            : existing.barcode;
 
-    const params = [name, price, cost, stock, category, barcode, min_stock, location, image, keywordsStr, variantsStr, req.params.id];
+        const cleanVariants = variants !== undefined
+            ? ((Array.isArray(variants) && variants.length > 0) ? JSON.stringify(variants) : null)
+            : existing.variants;
 
-    db.run(sql, params, function (err, result) {
-        if (err) {
-            res.status(400).json({ "error": err.message });
-            return;
-        }
-        res.json({
-            message: "success",
-            changes: this.changes
+        const cleanKeywords = keywords !== undefined
+            ? (Array.isArray(keywords) ? JSON.stringify(keywords) : '[]')
+            : existing.keywords;
+
+        const cleanMinStock = (min_stock !== undefined && min_stock !== null && min_stock !== '')
+            ? Number(min_stock)
+            : existing.min_stock;
+
+        const updatedName = (name !== undefined && name !== null) ? name.trim() : existing.name;
+        const updatedPrice = price !== undefined ? (Number(price) || 0) : existing.price;
+        const updatedCost = cost !== undefined ? (Number(cost) || 0) : existing.cost;
+        const updatedStock = stock !== undefined ? (Number(stock) || 0) : existing.stock;
+        const updatedCategory = category !== undefined ? category : existing.category;
+        const updatedLocation = location !== undefined ? (location ? location.trim() : '') : existing.location;
+        const updatedImage = image !== undefined ? image : existing.image;
+
+        const sql = `UPDATE products SET
+            name = ?, price = ?, cost = ?, stock = ?, category = ?,
+            barcode = ?, min_stock = ?, location = ?, image = ?,
+            keywords = ?, variants = ?
+        WHERE id = ?`;
+
+        const params = [
+            updatedName, updatedPrice, updatedCost, updatedStock, updatedCategory,
+            cleanBarcode, cleanMinStock, updatedLocation, updatedImage,
+            cleanKeywords, cleanVariants, productId
+        ];
+
+        db.run(sql, params, function (updateErr) {
+            if (updateErr) {
+                console.error(`[PUT Product ${productId}] Error:`, updateErr.message);
+                if (updateErr.message.includes('UNIQUE constraint failed: products.barcode')) {
+                    return res.status(400).json({ error: `El código de barras "${barcode}" ya está registrado en otro producto.` });
+                }
+                return res.status(400).json({ error: updateErr.message });
+            }
+            res.json({
+                message: "success",
+                changes: this.changes
+            });
         });
     });
 });
@@ -582,7 +658,7 @@ app.get('/api/backup/download', authenticateToken, authorizeRole('ADMIN'), (req,
     if (!fs.existsSync(dbPath)) {
         return res.status(404).json({ error: 'No existe la base de datos' });
     }
-    const filename = `backup-tecniworld-${new Date().toISOString().split('T')[0]}.sqlite`;
+    const filename = `backup-pos-${new Date().toISOString().split('T')[0]}.sqlite`;
     res.setHeader('Content-Type', 'application/x-sqlite3');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.sendFile(dbPath);
@@ -700,7 +776,7 @@ app.post('/api/print/ticket', authenticateToken, async (req, res) => {
 
                 // Inject Company Info
                 company: {
-                    name: company.fantasyName || company.name || 'TecniWorld',
+                    name: company.fantasyName || company.name || 'Punto de Venta',
                     legalName: company.name,
                     address: company.address,
                     rut: company.rut,

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export const useCart = (taxRate = 19, taxIncluded = true) => {
+export const useCart = (taxRate = 21, taxIncluded = true) => {
     const [cartItems, setCartItems] = useState([]);
 
     const addToCart = (product) => {

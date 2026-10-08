@@ -7,6 +7,7 @@ import PaymentSidebar from './components/PaymentSidebar';
 import CashRegisterModal from './components/CashRegisterModal';
 
 import CustomItemModal from './components/CustomItemModal';
+import { formatMoney } from '../../utils/formatMoney';
 
 const PosPage = ({
     settings,
@@ -134,9 +135,9 @@ const PosPage = ({
                 mobileStickyFooter={
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#5f6368', fontSize: '0.9rem' }}>Subtotal: ${subtotal.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                            <span style={{ color: '#5f6368', fontSize: '0.9rem' }}>Subtotal: {formatMoney(subtotal)}</span>
                             <span style={{ color: '#1a73e8', fontSize: '1.25rem', fontWeight: '800' }}>
-                                Total: ${total.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                                Total: {formatMoney(total)}
                             </span>
                         </div>
                         <button
@@ -166,17 +167,17 @@ const PosPage = ({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', width: '220px' }}>
                                 <span style={{ color: '#5f6368', fontSize: '0.9rem' }}>Subtotal:</span>
-                                <span style={{ fontWeight: '500', minWidth: '80px', textAlign: 'right' }}>${subtotal.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                                <span style={{ fontWeight: '500', minWidth: '80px', textAlign: 'right' }}>{formatMoney(subtotal)}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', width: '220px' }}>
                                 <span style={{ color: '#5f6368', fontSize: '0.9rem' }}>Impuestos ({settings?.system?.taxRate || 0}%):</span>
-                                <span style={{ fontWeight: '500', minWidth: '80px', textAlign: 'right' }}>${tax.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                                <span style={{ fontWeight: '500', minWidth: '80px', textAlign: 'right' }}>{formatMoney(tax)}</span>
                             </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
                             <div style={{ color: '#1a73e8', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '0px' }}>Total a Pagar</div>
                             <div style={{ fontSize: '3.5rem', fontWeight: '800', lineHeight: '1', color: '#202124', letterSpacing: '-1px' }}>
-                                ${total.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                                {formatMoney(total)}
                             </div>
                         </div>
                     </div>

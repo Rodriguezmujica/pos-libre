@@ -108,7 +108,7 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `backup-tecniworld-${new Date().toISOString().split('T')[0]}.sqlite`;
+            a.download = `backup-pos-${new Date().toISOString().split('T')[0]}.sqlite`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -284,7 +284,7 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
                                     <label>Nombre de la Tienda (Fantasía)</label>
                                     <input
                                         type="text"
-                                        placeholder="Ej: TecniWorld"
+                                        placeholder="Ej: Mercadillo Parroquial"
                                         value={localSettings.company.fantasyName || ''}
                                         onChange={(e) => handleChange('company', 'fantasyName', e.target.value)}
                                         className={styles.input}
@@ -295,7 +295,7 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
                                     <label>Razón Social (Legal)</label>
                                     <input
                                         type="text"
-                                        placeholder="Ej: Mi Empresa SpA"
+                                        placeholder="Ej: Asociación / Parroquia"
                                         value={localSettings.company.name || ''}
                                         onChange={(e) => handleChange('company', 'name', e.target.value)}
                                         className={styles.input}
@@ -304,10 +304,10 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
 
                                 <div className={styles.row2}>
                                     <div className={styles.formGroup}>
-                                        <label>RUT / Identificación</label>
+                                        <label>NIF / CIF / Identificación</label>
                                         <input
                                             type="text"
-                                            placeholder="76.XXX.XXX-X"
+                                            placeholder="B-12345678"
                                             value={localSettings.company.rut || ''}
                                             onChange={(e) => handleChange('company', 'rut', e.target.value)}
                                             className={styles.input}
@@ -317,7 +317,7 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
                                         <label>Teléfono</label>
                                         <input
                                             type="text"
-                                            placeholder="+56 9 ..."
+                                            placeholder="+34 600 000 000"
                                             value={localSettings.company.phone || ''}
                                             onChange={(e) => handleChange('company', 'phone', e.target.value)}
                                             className={styles.input}
@@ -329,7 +329,7 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
                                     <label>Dirección</label>
                                     <input
                                         type="text"
-                                        placeholder="Av. Siempre Viva 123"
+                                        placeholder="Calle Mayor 1, Madrid"
                                         value={localSettings.company.address || ''}
                                         onChange={(e) => handleChange('company', 'address', e.target.value)}
                                         className={styles.input}
@@ -340,7 +340,7 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
                                     <label>Texto Pie de Ticket</label>
                                     <input
                                         type="text"
-                                        placeholder="Gracias por su compra!"
+                                        placeholder="¡Gracias por su colaboración!"
                                         value={localSettings.ticket?.footerText || ''}
                                         onChange={(e) => handleChange('ticket', 'footerText', e.target.value)}
                                         className={styles.input}
@@ -361,16 +361,16 @@ const SettingsPage = ({ onBack, settings, onUpdateSettings, users = [], onAddUse
                                         <div className={styles.ticketHeader}>
                                             <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: '800' }}>{localSettings.company.fantasyName?.toUpperCase() || localSettings.company.name?.toUpperCase() || 'NOMBRE TIENDA'}</h3>
                                             <p style={{ margin: 0 }}>{localSettings.company.name || ''}</p>
-                                            <p style={{ margin: 0 }}>RUT: {localSettings.company.rut || '76.XXX.XXX-X'}</p>
-                                            <p style={{ margin: 0 }}>{localSettings.company.address || 'Dirección de ejemplo 123'}</p>
-                                            <p style={{ margin: 0 }}>Tel: {localSettings.company.phone || '+56 9 XXXXXXXX'}</p>
+                                            <p style={{ margin: 0 }}>{localSettings.company.rut ? `NIF/CIF: ${localSettings.company.rut}` : ''}</p>
+                                            <p style={{ margin: 0 }}>{localSettings.company.address || 'Dirección de ejemplo'}</p>
+                                            <p style={{ margin: 0 }}>{localSettings.company.phone ? `Tel: ${localSettings.company.phone}` : ''}</p>
                                         </div>
                                         <div className={styles.ticketDivider}></div>
                                         <div className={styles.ticketBody}>
-                                            <div className={styles.ticketRow}><span>Producto A</span><span>$1.000</span></div>
-                                            <div className={styles.ticketRow}><span>Producto B</span><span>$2.500</span></div>
+                                            <div className={styles.ticketRow}><span>Producto A</span><span>10,00 €</span></div>
+                                            <div className={styles.ticketRow}><span>Producto B</span><span>25,00 €</span></div>
                                             <div className={styles.ticketDivider}></div>
-                                            <div className={styles.ticketRow} style={{ fontWeight: 'bold' }}><span>TOTAL</span><span>$3.500</span></div>
+                                            <div className={styles.ticketRow} style={{ fontWeight: 'bold' }}><span>TOTAL</span><span>35,00 €</span></div>
                                         </div>
                                         <div className={styles.ticketFooter}>
                                             {localSettings.ticket?.footerText || '¡Gracias por su preferencia!'}

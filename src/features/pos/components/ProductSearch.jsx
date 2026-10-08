@@ -3,6 +3,7 @@ import { Search, ScanBarcode, Eye, PlusCircle } from 'lucide-react';
 import styles from '../../../styles/ProductSearch.module.css';
 import ImagePreviewModal from '../../../components/common/ImagePreviewModal';
 import VariantSelector from './VariantSelector';
+import { formatMoney } from '../../../utils/formatMoney';
 
 const ProductSearch = ({ onAddToCart, products = [], onOpenCustomItem }) => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -145,13 +146,13 @@ const ProductSearch = ({ onAddToCart, products = [], onOpenCustomItem }) => {
                                 <span className={styles.categoryBadge}>{product.category}</span>
                             </div>
                             <div className={styles.colPrice}>
-                                ${product.price.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                                {formatMoney(product.price)}
                             </div>
                             <div className={styles.colStock}>
                                 <span className={styles.stockCount}>
-                                    {product.variants
-                                        ? product.variants.reduce((acc, v) => acc + v.stock, 0) // Sum variant stock for display
-                                        : product.stock
+                                    {Array.isArray(product.variants) && product.variants.length > 0
+                                        ? product.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
+                                        : (product.stock || 0)
                                     } en Stock
                                 </span>
                             </div>

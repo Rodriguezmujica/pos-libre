@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertCircle, Check, X } from 'lucide-react';
 import styles from '../../styles/SettingsView.module.css';
+import { formatMoney } from '../../utils/formatMoney';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, total, method }) => {
     const [printTicket, setPrintTicket] = React.useState(true);
@@ -16,7 +17,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, total, method }) => {
 
     const methodLabel = {
         'cash': 'Efectivo',
-        'debit': 'Tarjeta Débito',
+        'debit': 'Tarjeta / Bizum',
         'credit': 'Tarjeta Crédito',
         'transfer': 'Transferencia'
     }[method] || method;
@@ -42,7 +43,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, total, method }) => {
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 700, color: '#1a73e8', borderTop: '1px solid #e0e0e0', paddingTop: '8px' }}>
                             <span>Total a Pagar:</span>
-                            <span>${(total || 0).toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                            <span>{formatMoney(total || 0)}</span>
                         </div>
                     </div>
 

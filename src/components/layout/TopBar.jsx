@@ -35,8 +35,8 @@ const TopBar = ({ storeName, user, onUserClick, inventory = [], settings, onNoti
                     <Store className={styles.storeIcon} />
                 </div>
                 <div className={styles.storeDetails}>
-                    <h1 className={styles.storeName}>{storeName || 'TIENDA PRINCIPAL'}</h1>
-                    <span className={styles.storeBranch}>SUCURSAL CENTRAL</span>
+                    <h1 className={styles.storeName}>{storeName || 'PUNTO DE VENTA'}</h1>
+                    <span className={styles.storeBranch}>VENTA GENERAL</span>
                 </div>
 
                 {/* Cash Register Status Badge */}

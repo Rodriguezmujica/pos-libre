@@ -1,15 +1,16 @@
 const db = require('./database');
 
 const products = [
-    { id: 1, name: 'iPhone 15 Pro Max', price: 1200000 },
-    { id: 2, name: 'Sony Alpha A7 IV', price: 2500000 },
-    { id: 3, name: 'MacBook Air M3', price: 1100000 },
-    { id: 4, name: 'Logitech MX Master 3S', price: 100000 },
-    { id: 5, name: 'Samsung T9 SSD 2TB', price: 240000 }
+    { id: 1, name: 'Refresco / Bebida', price: 1.50 },
+    { id: 2, name: 'Plato de Comida / Menú', price: 5.00 },
+    { id: 3, name: 'Café / Infusión', price: 1.20 },
+    { id: 4, name: 'Corte de Pelo', price: 8.00 },
+    { id: 5, name: 'Postre / Dulce', price: 2.00 },
+    { id: 6, name: 'Artículo Varios', price: 3.00 }
 ];
 
 const paymentMethods = ['cash', 'debit', 'credit'];
-const cashiers = ['Admin User', 'Vendedor 1'];
+const cashiers = ['Administrador', 'Cajero General'];
 
 function randomDate(start, end) {
     return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
@@ -40,28 +41,28 @@ function seedSales() {
 
             for (let j = 0; j < numItems; j++) {
                 const product = products[Math.floor(Math.random() * products.length)];
-                const quantity = Math.floor(Math.random() * 2) + 1;
+                const quantity = Math.floor(Math.random() * 3) + 1;
                 total += product.price * quantity;
-                saleItems.push({ ...product, quantity });
+                saleItems.push({ product_id: product.id, quantity, price: product.price });
             }
 
             db.run(insertSale, [id, date, total, paymentMethod, cashier], function (err) {
-                if (err) console.error("Error inserting sale:", err);
-            });
-
-            saleItems.forEach(item => {
-                db.run(insertItem, [id, item.id, item.quantity, item.price], (err) => {
-                    if (err) console.error("Error inserting item:", err);
+                if (err) {
+                    console.error('Error inserting sale:', err);
+                    return;
+                }
+                saleItems.forEach(item => {
+                    db.run(insertItem, [id, item.product_id, item.quantity, item.price]);
                 });
             });
         }
 
-        db.run('COMMIT', () => {
-            console.log("Successfully seeded 50 past sales.");
-            console.log("Press Ctrl+C to exit.");
+        db.run('COMMIT', (err) => {
+            if (err) console.error('Commit error:', err);
+            else console.log('Sales seeded successfully.');
+            process.exit(0);
         });
     });
 }
 
-// Wait for DB connection
-setTimeout(seedSales, 1000);
+seedSales();

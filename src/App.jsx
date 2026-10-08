@@ -53,7 +53,7 @@ function AppContent() {
   // If unchecked, we treat it as DISABLED (Rate 0).
   // This ensures the Total Price is always the Input Price (e.g. 2000 -> 2000).
   const isTaxEnabled = settings?.system?.taxIncluded ?? true;
-  const taxRate = isTaxEnabled ? (settings?.system?.taxRate || 19) : 0;
+  const taxRate = isTaxEnabled ? (settings?.system?.taxRate || 21) : 0;
   const isTaxIncluded = true; // Always treat as included so we don't add on top if enabled
 
   const cartHook = useCart(taxRate, isTaxIncluded); // Pass both to hook
@@ -84,17 +84,18 @@ function AppContent() {
     closeStockWarning
   } = stockHook;
 
-  // 3. Transaction Logic extracted
-  // Fix: Pass fused object { ...state, updateSessionTotals } as expected by useTransaction
+  // 3. Sales Logic (shared by POS transactions + Reports)
+  const salesHook = useSales();
+  const { sales, refreshSales, createSale, processExchange, voidSale } = salesHook;
+
+  // 4. Transaction Logic — usa la misma instancia de ventas que el reporte
   const transactionHook = useTransaction(
     cartHook,
     { ...cashRegister, updateSessionTotals: cashRegisterHook.updateSessionTotals },
     user,
-    refreshInventory
+    refreshInventory,
+    { createSale, processExchange, voidSale }
   );
-
-  // 4. Sales Logic (for Reports)
-  const { sales, refreshSales } = useSales();
 
   // Reload sales when the user changes (e.g., login/logout) to ensure data freshness
   useEffect(() => {
@@ -106,6 +107,13 @@ function AppContent() {
   // Local UI State (Navigational state primarily)
   const [currentView, setCurrentView] = useState('POS');
   const [notificationTargetId, setNotificationTargetId] = useState(null);
+
+  // Al abrir el reporte, refrescar ventas para ver lo del momento (sin cerrar caja)
+  useEffect(() => {
+    if (currentView === 'REPORT' && user) {
+      refreshSales();
+    }
+  }, [currentView, user, refreshSales]);
 
   // Handlers Wrappers - catching errors and showing global modal
   const handleUpdateProduct = async (product) => {
@@ -286,7 +294,10 @@ function AppContent() {
         addToCart={checkStockAndAdd} // Use stock hook wrapper
         updateQuantity={updateQuantity}
         removeFromCart={removeFromCart}
-        onShowReport={() => setCurrentView('REPORT')}
+        onShowReport={() => {
+          refreshSales();
+          setCurrentView('REPORT');
+        }}
         onShowInventory={(item) => {
           if (item && item.id) {
             handleNotificationClick(item);

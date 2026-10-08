@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { formatMoney } from '../utils/formatMoney';
 
 export const useSales = () => {
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const loadSales = async () => {
+    const loadSales = useCallback(async () => {
         setLoading(true);
         try {
             const salesData = await api.getSales();
@@ -15,13 +16,13 @@ export const useSales = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         loadSales();
-    }, []);
+    }, [loadSales]);
 
-    const createSale = async (saleDetails) => {
+    const createSale = useCallback(async (saleDetails) => {
         const { cartItems, total, paymentMethod, user, note } = saleDetails;
 
         const saleData = {
@@ -36,17 +37,30 @@ export const useSales = () => {
 
         try {
             const result = await api.createSale(saleData);
-            // Result contains saleId from backend
-            const finalSale = { ...saleData, id: result.saleId };
-            setSales(prev => [...prev, finalSale]);
-            return { success: true, result, saleData: finalSale };
+            // Refrescar desde el servidor para que el reporte vea la venta al instante
+            // (mismo shape: paymentMethod, items, status, etc.)
+            await loadSales();
+            return {
+                success: true,
+                result,
+                saleData: {
+                    id: result.saleId,
+                    date: saleData.date,
+                    items: cartItems,
+                    total,
+                    paymentMethod: paymentMethod,
+                    cashier: saleData.cashier,
+                    status: 'COMPLETED',
+                    note
+                }
+            };
         } catch (error) {
             console.error("Error completing sale:", error);
             throw error;
         }
-    };
+    }, [loadSales]);
 
-    const processExchange = async (exchangeDetails) => {
+    const processExchange = useCallback(async (exchangeDetails) => {
         const { returnedProduct, cartTotal, cartItems, user } = exchangeDetails;
 
         // 1. Update stock of returned product (+1)
@@ -61,7 +75,7 @@ export const useSales = () => {
 
         // 2. Create Sale Record
         const difference = cartTotal - returnedProduct.price;
-        const note = `Cambio: Devolvió ${returnedProduct.name} ($${returnedProduct.price.toLocaleString('es-CL', { maximumFractionDigits: 0 })}). Diferencia: $${difference.toLocaleString('es-CL', { maximumFractionDigits: 0 })}`;
+        const note = `Cambio: Devolvió ${returnedProduct.name} (${formatMoney(returnedProduct.price)}). Diferencia: ${formatMoney(difference)}`;
 
         try {
             const result = await createSale({
@@ -79,9 +93,9 @@ export const useSales = () => {
         } catch (error) {
             throw error;
         }
-    }; // End processExchange
+    }, [createSale]); // Added dependency createSale
 
-    const voidSale = async (saleId, reason) => {
+    const voidSale = useCallback(async (saleId, reason) => {
         try {
             await api.voidSale(saleId, reason);
             // We could update local state manually, but refreshing from server is safer to get updated status and metadata
@@ -91,7 +105,7 @@ export const useSales = () => {
             console.error("Error voiding sale:", error);
             throw error;
         }
-    };
+    }, [loadSales]); // Added dependency loadSales
 
     return {
         sales,

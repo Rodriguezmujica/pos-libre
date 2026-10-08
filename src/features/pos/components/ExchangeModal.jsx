@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Search, ArrowLeftRight, AlertCircle, CheckCircle2 } from 'lucide-react';
 import styles from '../../../styles/SettingsView.module.css';
+import { formatMoney } from '../../../utils/formatMoney';
 
 const ExchangeModal = ({ isOpen, onClose, onConfirm, inventory = [], cartTotal = 0 }) => {
     const [barcode, setBarcode] = useState('');
@@ -106,7 +107,7 @@ const ExchangeModal = ({ isOpen, onClose, onConfirm, inventory = [], cartTotal =
                             <h4 style={{ margin: '0 0 8px 0', color: '#202124', fontSize: '1rem' }}>Producto a Devolver:</h4>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                                 <span style={{ fontWeight: '500' }}>{returnedProduct.name}</span>
-                                <span style={{ fontWeight: 'bold' }}>${returnedProduct.price.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                                <span style={{ fontWeight: 'bold' }}>{formatMoney(returnedProduct.price)}</span>
                             </div>
                             <div style={{ fontSize: '0.85rem', color: '#5f6368' }}>SKU: {returnedProduct.sku || returnedProduct.barcode || 'N/A'}</div>
 
@@ -114,7 +115,7 @@ const ExchangeModal = ({ isOpen, onClose, onConfirm, inventory = [], cartTotal =
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', color: '#5f6368' }}>
                                 <span>Total Nueva Compra:</span>
-                                <span>${cartTotal.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                                <span>{formatMoney(cartTotal)}</span>
                             </div>
 
                             <div style={{
@@ -131,7 +132,7 @@ const ExchangeModal = ({ isOpen, onClose, onConfirm, inventory = [], cartTotal =
                                     {isPayable ? 'Diferencia a Pagar:' : (isRefund ? 'A Devolver:' : 'Cambio Parejo:')}
                                 </span>
                                 <span style={{ color: isPayable ? '#d93025' : (isRefund ? '#188038' : '#202124') }}>
-                                    ${Math.abs(difference).toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                                    {formatMoney(Math.abs(difference))}
                                 </span>
                             </div>
                         </div>

@@ -1,41 +1,41 @@
 export const companySettings = {
-    name: 'Accesorios Tech Chile SpA',
-    fantasyName: 'TecniWorld',
-    rut: '76.123.456-K',
-    address: 'Av. Providencia 1234, Oficina 502, Santiago',
-    phone: '+56 9 8765 4321',
-    giro: 'Retail de accesorios electrónicos'
+    name: 'Punto de Venta General',
+    fantasyName: 'Punto de Venta',
+    rut: '',
+    address: 'España',
+    phone: '',
+    giro: 'Ventas generales y servicios'
 };
 
 export const ticketSettings = {
-    showTaxBreakdown: true,
+    showTaxBreakdown: false,
     showCashier: true,
-    footerText: '¡Gracias por preferir Tech Chile!\nSiguenos en @tech_chile'
+    footerText: '¡Muchas gracias por su colaboración!\nQue tenga un excelente día'
 };
 
 export const users = [
     {
         id: 1,
-        name: 'Andrés Contreras',
-        email: 'andres@techchile.cl',
+        name: 'Administrador',
+        email: 'admin@pos.local',
         role: 'ADMIN',
         avatarColor: '#d2e3fc', // Light Blue
         avatarText: '#174ea6'
     },
     {
         id: 2,
-        name: 'María Valencia',
-        email: 'maria.v@techchile.cl',
+        name: 'Cajero General',
+        email: 'cajero@pos.local',
         role: 'CAJERO',
-        avatarColor: '#fce8e6', // Light Red/Orange
-        avatarText: '#c5221f' // Actually using yellow/orange based on image for 'MV'
+        avatarColor: '#fce8e6',
+        avatarText: '#c5221f'
     }
 ];
 
 export const systemSettings = {
-    lowStockAlert: true,
+    lowStockAlert: false,
     autoBackup: false,
-    minStock: 5,
-    taxRate: 19,
-    printerName: 'POS-58C'
+    minStock: 0,
+    taxRate: 21,
+    printerName: ''
 };

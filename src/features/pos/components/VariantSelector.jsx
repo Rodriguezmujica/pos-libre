@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Package, Check } from 'lucide-react';
 import styles from '../../../styles/SettingsView.module.css';
+import { formatMoney } from '../../../utils/formatMoney';
 
 const VariantSelector = ({ isOpen, onClose, product, onSelectVariant }) => {
     if (!isOpen || !product) return null;
@@ -58,7 +59,7 @@ const VariantSelector = ({ isOpen, onClose, product, onSelectVariant }) => {
                                     </div>
                                 </div>
                                 <div style={{ fontWeight: 700, color: '#1a73e8', fontSize: '16px' }}>
-                                    ${(variant.price || product.price).toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                                    {formatMoney(variant.price || product.price)}
                                 </div>
                             </button>
                         ))}

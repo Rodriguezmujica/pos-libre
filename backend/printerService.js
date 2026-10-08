@@ -4,6 +4,19 @@ const path = require('path');
 const os = require('os');
 const EscPosEncoder = require('./escpos-encoder');
 
+
+function formatMoney(amount) {
+    const value = Number(amount);
+    const safe = Number.isFinite(value) ? value : 0;
+    return safe.toLocaleString('es-ES', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
+
 class PrinterService {
     constructor() {
         this.printerName = 'POS-58C';
@@ -42,12 +55,11 @@ class PrinterService {
 
                 // Setup Company Data
                 const company = data.company || {};
-                const name = company.name || 'INVERSIONES ROSNER';
-                const subtitle = company.legalName || 'Estacionamiento y Lavado'; // Or 'Venta de Accesorios'
-                const address = company.address || 'Perez Rosales #733-C';
-                const location = 'Santiago, Chile'; // Could be part of address
-                const phone = company.phone ? `Tel: ${company.phone}` : 'Tel: +56 9 3395 8739';
-                const rut = company.rut ? `RUT: ${company.rut}` : '';
+                const name = company.name || 'Punto de Venta';
+                const subtitle = company.legalName || '';
+                const address = company.address || '';
+                const phone = company.phone ? `Tel: ${company.phone}` : '';
+                const rut = company.rut ? `NIF/CIF: ${company.rut}` : '';
 
                 // Header
                 encoder.align('center');
@@ -83,12 +95,12 @@ class PrinterService {
 
                         // Price aligned right? simpler to just put it below or use spacing if we calculate width
                         // For now simple:
-                        encoder.text(`   $${(item.price * item.qty).toLocaleString('es-CL')}`).newline();
+                        encoder.text(`   ${formatMoney(item.price * item.qty)}`).newline();
                     });
                     encoder.text('--------------------------------').newline();
                     encoder.align('right');
                     encoder.bold(true);
-                    encoder.text(`TOTAL: $${(data.total || 0).toLocaleString('es-CL')}`).newline();
+                    encoder.text(`TOTAL: ${formatMoney(data.total || 0)}`).newline();
                     encoder.bold(false);
                 } else {
                     // Fallback

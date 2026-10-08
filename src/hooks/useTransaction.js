@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { useSales } from './useSales';
 import { api } from '../services/api';
+import { formatMoney } from '../utils/formatMoney';
 
-export function useTransaction(cart, cashRegister, user, refreshInventory) {
+export function useTransaction(cart, cashRegister, user, refreshInventory, salesApi) {
     // cart = { cartItems, total, clearCart }
     // cashRegister = { isOpen, updateSessionTotals }
+    // salesApi = { createSale, processExchange, voidSale } — misma instancia que el reporte
 
-    const { createSale, processExchange, voidSale } = useSales();
+    const { createSale, processExchange, voidSale } = salesApi;
 
     const [transactionState, setTransactionState] = useState({
         pendingPaymentMethod: null,
@@ -74,7 +75,7 @@ export function useTransaction(cart, cashRegister, user, refreshInventory) {
             const ticketFooter = settings?.ticket?.footerText || '';
             const fantasyName = settings?.company?.fantasyName || settings?.company?.name || '';
 
-            const successMsg = `Venta completada con éxito!\nID: ${result.saleId}\nTotal: $${cart.total.toLocaleString('es-CL', { maximumFractionDigits: 0 })}\n\n(Ticket enviado a impreso)\n\n--- TICKET ---\n${fantasyName}\n${ticketFooter}`;
+            const successMsg = `Venta completada con éxito!\nID: ${result.saleId}\nTotal: ${formatMoney(cart.total)}\n\n(Ticket enviado a impreso)\n\n--- TICKET ---\n${fantasyName}\n${ticketFooter}`;
 
             setTransactionState(prev => ({
                 ...prev,
@@ -119,8 +120,8 @@ export function useTransaction(cart, cashRegister, user, refreshInventory) {
 
             let message = `Cambio completado con éxito!\nID: ${result.saleId}`;
             message += `\n\nProducto Devuelto: ${returnedProduct.name}`;
-            if (difference > 0) message += `\nCliente pagó diferencia: $${difference.toLocaleString('es-CL', { maximumFractionDigits: 0 })}`;
-            else if (difference < 0) message += `\nSe devolvió al cliente: $${Math.abs(difference).toLocaleString('es-CL', { maximumFractionDigits: 0 })}`;
+            if (difference > 0) message += `\nCliente pagó diferencia: ${formatMoney(difference)}`;
+            else if (difference < 0) message += `\nSe devolvió al cliente: ${formatMoney(Math.abs(difference))}`;
             else message += `\nCambio parejo (sin diferencia).`;
 
             setTransactionState(prev => ({

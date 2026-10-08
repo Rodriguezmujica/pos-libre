@@ -20,7 +20,11 @@ function getServerPath() {
 }
 
 function startServer() {
-    const userDataPath = app.getPath('userData');
+    // En desarrollo usamos la carpeta backend del proyecto para compartir pos.db.
+    // En produccion (app empaquetada), usamos app.getPath('userData') para permisos en Windows.
+    const userDataPath = isDev
+        ? path.join(__dirname, '../backend')
+        : app.getPath('userData');
     console.log('App User Data Path:', userDataPath);
 
     const serverPath = getServerPath();

@@ -15,24 +15,12 @@ const db = new sqlite3.Database(dbPath, (err) => {
 });
 
 const seedData = [
-    {
-        name: 'iPhone 15 Pro Max',
-        price: 1200000,
-        cost: 950000,
-        stock: 12,
-        category: 'CELULAR',
-        barcode: '194253408456',
-        min_stock: 5,
-        variants: [
-            { id: 'v1-256-nat', name: '256GB - Titanio Natural', price: 1200000, stock: 4 },
-            { id: 'v1-256-blue', name: '256GB - Azul Titanio', price: 1200000, stock: 3 },
-            { id: 'v1-512-nat', name: '512GB - Titanio Natural', price: 1400000, stock: 5 }
-        ]
-    },
-    { name: 'Sony Alpha A7 IV', price: 2500000, cost: 2100000, stock: 2, category: 'CÁMARA', barcode: '4548736133036', min_stock: 2 },
-    { name: 'MacBook Air M3', price: 1100000, cost: 900000, stock: 8, category: 'COMPUTACIÓN', barcode: '194253765123', min_stock: 5 },
-    { name: 'Logitech MX Master 3S', price: 100000, cost: 65000, stock: 45, category: 'ACCESORIOS', barcode: '097855169045', min_stock: 5 },
-    { name: 'Samsung T9 SSD 2TB', price: 240000, cost: 180000, stock: 18, category: 'ALMACENAMIENTO', barcode: '887276789012', min_stock: 5 }
+    { name: 'Refresco / Bebida', price: 1.50, cost: 0.80, stock: 50, category: 'BEBIDAS', barcode: null, min_stock: 5 },
+    { name: 'Plato de Comida / Menú', price: 5.00, cost: 2.00, stock: 40, category: 'COMIDA', barcode: null, min_stock: 5 },
+    { name: 'Café / Infusión', price: 1.20, cost: 0.30, stock: 100, category: 'BEBIDAS', barcode: null, min_stock: 5 },
+    { name: 'Corte de Pelo', price: 8.00, cost: 0, stock: 999, category: 'SERVICIOS', barcode: null, min_stock: 0 },
+    { name: 'Postre / Dulce', price: 2.00, cost: 0.80, stock: 30, category: 'COMIDA', barcode: null, min_stock: 5 },
+    { name: 'Artículo Varios', price: 3.00, cost: 1.00, stock: 20, category: 'VARIOS', barcode: null, min_stock: 0 }
 ];
 
 const initializeDatabase = () => {
@@ -43,6 +31,34 @@ const initializeDatabase = () => {
             value TEXT NOT NULL
         )`, (err) => {
             if (err) console.error("Error creating settings table:", err);
+
+            // Default settings for Spain / General POS
+            const defaultSettings = [
+                ['company', JSON.stringify({
+                    name: 'Punto de Venta General',
+                    fantasyName: 'Punto de Venta',
+                    rut: '',
+                    address: 'España',
+                    phone: '',
+                    giro: 'Ventas generales y servicios'
+                })],
+                ['ticket', JSON.stringify({
+                    showTaxBreakdown: false,
+                    showCashier: true,
+                    footerText: '¡Muchas gracias por su colaboración!\nQue tenga un excelente día'
+                })],
+                ['system', JSON.stringify({
+                    lowStockAlert: false,
+                    autoBackup: false,
+                    minStock: 0,
+                    taxRate: 21,
+                    taxIncluded: true
+                })]
+            ];
+
+            defaultSettings.forEach(([k, v]) => {
+                db.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [k, v]);
+            });
 
             // 2. Create Products Table
             db.run(`CREATE TABLE IF NOT EXISTS products (

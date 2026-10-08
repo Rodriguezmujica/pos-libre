@@ -12,6 +12,17 @@ const getHeaders = () => {
     return headers;
 };
 
+const readErrorMessage = async (response) => {
+    const text = await response.text().catch(() => '');
+    if (!text) return `HTTP ${response.status}`;
+    try {
+        const data = JSON.parse(text);
+        return data?.error || data?.message || text;
+    } catch {
+        return text;
+    }
+};
+
 export const api = {
     setToken: (token) => {
         authToken = token;
@@ -25,8 +36,7 @@ export const api = {
             body: JSON.stringify(credentials)
         });
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Login failed');
+            throw new Error(await readErrorMessage(response));
         }
         return response.json();
     },
@@ -34,7 +44,7 @@ export const api = {
     verifyToken: async () => {
         const response = await fetch(`${API_URL}/auth/verify`, { headers: getHeaders() });
         if (!response.ok) {
-            const error = new Error('Token verification failed');
+            const error = new Error(await readErrorMessage(response));
             error.response = response;
             throw error;
         }
@@ -43,7 +53,7 @@ export const api = {
 
     getUsers: async () => {
         const response = await fetch(`${API_URL}/users`, { headers: getHeaders() });
-        if (!response.ok) throw new Error('Failed to fetch users');
+        if (!response.ok) throw new Error(await readErrorMessage(response));
         return response.json();
     },
 
@@ -54,8 +64,7 @@ export const api = {
             body: JSON.stringify(user)
         });
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to create user');
+            throw new Error(await readErrorMessage(response));
         }
         return response.json();
     },
@@ -65,7 +74,8 @@ export const api = {
             method: 'DELETE',
             headers: getHeaders()
         });
-        return response.json();
+        if (!response.ok) throw new Error(await readErrorMessage(response));
+        return response.json().catch(() => ({}));
     },
 
     updateUser: async (id, userData) => {
@@ -75,8 +85,7 @@ export const api = {
             body: JSON.stringify(userData)
         });
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to update user');
+            throw new Error(await readErrorMessage(response));
         }
         return response.json();
     },
@@ -87,7 +96,7 @@ export const api = {
             headers: getHeaders(),
             cache: 'no-store'
         });
-        if (!response.ok) throw new Error('Network response was not ok');
+        if (!response.ok) throw new Error(await readErrorMessage(response));
         return response.json();
     },
 
@@ -97,6 +106,7 @@ export const api = {
             headers: getHeaders(),
             body: JSON.stringify(product)
         });
+        if (!response.ok) throw new Error(await readErrorMessage(response));
         return response.json();
     },
 
@@ -106,6 +116,7 @@ export const api = {
             headers: getHeaders(),
             body: JSON.stringify(updates)
         });
+        if (!response.ok) throw new Error(await readErrorMessage(response));
         return response.json();
     },
 
@@ -114,7 +125,8 @@ export const api = {
             method: 'DELETE',
             headers: getHeaders()
         });
-        return response.json();
+        if (!response.ok) throw new Error(await readErrorMessage(response));
+        return response.json().catch(() => ({}));
     },
 
     // Sales
@@ -123,7 +135,7 @@ export const api = {
             headers: getHeaders(),
             cache: 'no-store'
         });
-        if (!response.ok) throw new Error('Failed to fetch sales');
+        if (!response.ok) throw new Error(await readErrorMessage(response));
         return response.json();
     },
 
@@ -133,7 +145,7 @@ export const api = {
             headers: getHeaders(),
             body: JSON.stringify(saleData)
         });
-        if (!response.ok) throw new Error('Sale failed');
+        if (!response.ok) throw new Error(await readErrorMessage(response));
         return response.json();
     },
 
@@ -173,7 +185,7 @@ export const api = {
 
     getCashSessionHistory: async () => {
         const response = await fetch(`${API_URL}/cash-session/history`, { headers: getHeaders() });
-        if (!response.ok) throw new Error('Failed to fetch session history');
+        if (!response.ok) throw new Error(await readErrorMessage(response));
         return response.json();
     },
 
@@ -196,7 +208,7 @@ export const api = {
             headers: getHeaders(),
             body: JSON.stringify({ expectedCash, expectedCard })
         });
-        if (!response.ok) throw new Error('Error al actualizar sesión');
+        if (!response.ok) throw new Error(await readErrorMessage(response));
         return response.json();
     },
 
@@ -216,6 +228,7 @@ export const api = {
     // Settings
     getSettings: async () => {
         const response = await fetch(`${API_URL}/settings`, { headers: getHeaders() });
+        if (!response.ok) throw new Error(await readErrorMessage(response));
         return response.json();
     },
 
@@ -225,13 +238,14 @@ export const api = {
             headers: getHeaders(),
             body: JSON.stringify({ key, value })
         });
+        if (!response.ok) throw new Error(await readErrorMessage(response));
         return response.json();
     },
 
     // Backup & Maintenance
     downloadBackup: async () => {
         const response = await fetch(`${API_URL}/backup/download`, { headers: getHeaders() });
-        if (!response.ok) throw new Error('Failed to download backup');
+        if (!response.ok) throw new Error(await readErrorMessage(response));
         return response.blob();
     },
 
@@ -273,6 +287,7 @@ export const api = {
     // Printing
     getPrinters: async () => {
         const response = await fetch(`${API_URL}/printers`, { headers: getHeaders() });
+        if (!response.ok) throw new Error(await readErrorMessage(response));
         return response.json();
     },
 
@@ -283,8 +298,7 @@ export const api = {
             body: JSON.stringify({ saleId, data })
         });
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Print failed');
+            throw new Error(await readErrorMessage(response));
         }
         return response.json();
     }

@@ -40,9 +40,9 @@ export const useSettings = (user) => {
             console.error("Error loading settings:", error);
             // Fallback
             setSettings({
-                company: { ...companySettings, fantasyName: 'TecniWorld' },
+                company: { ...companySettings },
                 ticket: { ...ticketSettings },
-                system: { ...systemSettings, minStock: 5, taxRate: 19 },
+                system: { ...systemSettings },
                 users: [...mockUsers]
             });
         } finally {

@@ -38,10 +38,10 @@ const LoginPage = () => {
             <div className={styles.card}>
                 <div className={styles.header}>
                     <div className={styles.logo}>
-                        <h1>TW</h1>
+                        <h1>POS</h1>
                     </div>
                     <h2>Bienvenido</h2>
-                    <p>Sistema POS TecniWorld</p>
+                    <p>Punto de venta</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className={styles.form}>
