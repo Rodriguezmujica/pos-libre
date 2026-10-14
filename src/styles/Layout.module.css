@@ -2,6 +2,7 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+    min-height: 0;
     background-color: #f1f3f4;
     /* Google light gray background */
     font-family: 'Roboto', 'Inter', sans-serif;
@@ -11,8 +12,9 @@
 .mainContent {
     display: flex;
     flex: 1;
+    min-height: 0;
+    min-width: 0;
     overflow: hidden;
-    /* Prevent scroll on main container */
     padding: 12px;
     gap: 12px;
 }
@@ -23,7 +25,8 @@
     flex-direction: column;
     gap: 12px;
     min-width: 0;
-    /* Prevent flex items from overflowing */
+    min-height: 0;
+    overflow: hidden;
 }
 
 .leftColumn {
@@ -32,26 +35,96 @@
     flex-direction: column;
     gap: 12px;
     min-width: 0;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .rightColumn {
     flex: 1.2;
-    min-width: 320px;
+    min-width: 290px;
+    max-width: 440px;
     display: flex;
     flex-direction: column;
+    min-height: 0;
     overflow-y: auto;
-    /* Enable scrolling for sidebar */
+    overflow-x: hidden;
+}
+
+.rightColumn::-webkit-scrollbar {
+    width: 6px;
+}
+
+.rightColumn::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.rightColumn::-webkit-scrollbar-thumb {
+    background: #dadce0;
+    border-radius: 3px;
+}
+
+.rightColumn::-webkit-scrollbar-thumb:hover {
+    background: #bdc1c6;
 }
 
 .bottomBar {
+    flex-shrink: 0;
     background-color: white;
     border-radius: 12px;
-    padding: 16px 24px;
+    padding: 12px 20px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    border: 1px solid #dadce0;
+}
+
+.bottomBarInner {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    border: 1px solid #dadce0;
+    align-items: flex-end;
+    width: 100%;
+}
+
+.bottomBarTotals {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bottomBarRow {
+    display: flex;
+    justify-content: space-between;
+    width: 220px;
+}
+
+.bottomBarLabel {
+    color: #5f6368;
+    font-size: 0.85rem;
+}
+
+.bottomBarValue {
+    font-weight: 500;
+    min-width: 80px;
+    text-align: right;
+}
+
+.totalSection {
+    text-align: right;
+}
+
+.totalLabel {
+    color: #1a73e8;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 0;
+    letter-spacing: 0.5px;
+}
+
+.totalAmount {
+    font-size: clamp(1.8rem, 2.8vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1;
+    color: #202124;
+    letter-spacing: -1px;
 }
 
 /* Mobile sticky footer: total + Completar Venta siempre visibles */
@@ -59,8 +132,64 @@
     display: none;
 }
 
-/* Tablet y móvil: layout en columna */
-@media (max-width: 1024px) {
+/* Adaptación para pantallas de laptop / baja altura */
+@media (max-height: 800px) {
+    .mainContent {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .leftSection {
+        gap: 8px;
+    }
+
+    .leftColumn {
+        gap: 8px;
+    }
+
+    .bottomBar {
+        padding: 8px 16px;
+        border-radius: 8px;
+    }
+
+    .bottomBarRow {
+        width: 190px;
+    }
+
+    .bottomBarLabel {
+        font-size: 0.75rem;
+    }
+
+    .bottomBarValue {
+        font-size: 0.85rem;
+    }
+
+    .totalAmount {
+        font-size: clamp(1.6rem, 2.2vw, 2.3rem);
+    }
+}
+
+@media (max-height: 680px) {
+    .mainContent {
+        padding: 6px;
+        gap: 6px;
+    }
+
+    .bottomBar {
+        padding: 6px 12px;
+    }
+
+    .bottomBarRow {
+        width: 170px;
+    }
+
+    .totalAmount {
+        font-size: 1.8rem;
+    }
+}
+
+/* Tablet y móvil: layout en columna (ancho menor a 900px) */
+@media (max-width: 899px) {
     .mainContent {
         flex-direction: column;
         overflow-y: auto;
@@ -71,6 +200,7 @@
     .rightColumn {
         flex: none;
         width: 100%;
+        max-width: none;
         min-width: 0;
         margin-top: 12px;
     }

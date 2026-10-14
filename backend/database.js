@@ -120,13 +120,17 @@ const initializeDatabase = () => {
             status TEXT DEFAULT 'COMPLETED',
             void_reason TEXT,
             voided_by TEXT,
-            voided_at TEXT
+            voided_at TEXT,
+            amount_paid REAL DEFAULT 0,
+            change_amount REAL DEFAULT 0
         )`, (err) => {
             if (!err) {
                 // Migration for Sales table
-                const salesCols = ['status', 'void_reason', 'voided_by', 'voided_at'];
+                const salesCols = ['status', 'void_reason', 'voided_by', 'voided_at', 'amount_paid', 'change_amount'];
                 salesCols.forEach(col => {
-                    const def = col === 'status' ? "TEXT DEFAULT 'COMPLETED'" : "TEXT";
+                    let def = "TEXT";
+                    if (col === 'status') def = "TEXT DEFAULT 'COMPLETED'";
+                    else if (col === 'amount_paid' || col === 'change_amount') def = "REAL DEFAULT 0";
                     db.run(`ALTER TABLE sales ADD COLUMN ${col} ${def}`, (err) => { });
                 });
             }

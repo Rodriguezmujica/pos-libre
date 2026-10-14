@@ -8,6 +8,7 @@ import CashRegisterModal from './components/CashRegisterModal';
 
 import CustomItemModal from './components/CustomItemModal';
 import { formatMoney } from '../../utils/formatMoney';
+import layoutStyles from '../../styles/Layout.module.css';
 
 const PosPage = ({
     settings,
@@ -163,20 +164,20 @@ const PosPage = ({
                     </div>
                 }
                 bottomBar={
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '220px' }}>
-                                <span style={{ color: '#5f6368', fontSize: '0.9rem' }}>Subtotal:</span>
-                                <span style={{ fontWeight: '500', minWidth: '80px', textAlign: 'right' }}>{formatMoney(subtotal)}</span>
+                    <div className={layoutStyles.bottomBarInner}>
+                        <div className={layoutStyles.bottomBarTotals}>
+                            <div className={layoutStyles.bottomBarRow}>
+                                <span className={layoutStyles.bottomBarLabel}>Subtotal:</span>
+                                <span className={layoutStyles.bottomBarValue}>{formatMoney(subtotal)}</span>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '220px' }}>
-                                <span style={{ color: '#5f6368', fontSize: '0.9rem' }}>Impuestos ({settings?.system?.taxRate || 0}%):</span>
-                                <span style={{ fontWeight: '500', minWidth: '80px', textAlign: 'right' }}>{formatMoney(tax)}</span>
+                            <div className={layoutStyles.bottomBarRow}>
+                                <span className={layoutStyles.bottomBarLabel}>Impuestos ({settings?.system?.taxRate || 0}%):</span>
+                                <span className={layoutStyles.bottomBarValue}>{formatMoney(tax)}</span>
                             </div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                            <div style={{ color: '#1a73e8', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '0px' }}>Total a Pagar</div>
-                            <div style={{ fontSize: '3.5rem', fontWeight: '800', lineHeight: '1', color: '#202124', letterSpacing: '-1px' }}>
+                        <div className={layoutStyles.totalSection}>
+                            <div className={layoutStyles.totalLabel}>Total a Pagar</div>
+                            <div className={layoutStyles.totalAmount}>
                                 {formatMoney(total)}
                             </div>
                         </div>

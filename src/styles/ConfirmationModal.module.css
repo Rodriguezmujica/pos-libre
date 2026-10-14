@@ -1,0 +1,379 @@
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4000;
+    backdrop-filter: blur(4px);
+    padding: 16px;
+}
+
+.modalContent {
+    background: #ffffff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: popup 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: center center;
+}
+
+@keyframes popup {
+    from {
+        transform: scale(0.92);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.modalBody {
+    padding: 24px 24px 16px;
+    text-align: center;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.iconCircle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+}
+
+.iconCircleCash {
+    background: #e6f4ea;
+    color: #1e8e3e;
+}
+
+.iconCircleDefault {
+    background: #e8f0fe;
+    color: #1a73e8;
+}
+
+.modalTitle {
+    margin: 0 0 16px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #202124;
+}
+
+.summaryCard {
+    background: #f8f9fa;
+    border: 1px solid #e8eaed;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    text-align: left;
+}
+
+.summaryRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #5f6368;
+    margin-bottom: 8px;
+}
+
+.summaryRowValue {
+    font-weight: 600;
+    color: #202124;
+}
+
+.summaryTotalRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 17px;
+    font-weight: 700;
+    color: #1a73e8;
+    border-top: 1px solid #dadce0;
+    padding-top: 8px;
+}
+
+/* Sección de Cobro en Efectivo */
+.cashSection {
+    background: #ffffff;
+    border: 1px solid #dadce0;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    text-align: left;
+}
+
+.cashLabel {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #3c4043;
+    margin-bottom: 8px;
+}
+
+.cashInputWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.cashInputIcon {
+    position: absolute;
+    left: 12px;
+    color: #1e8e3e;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cashInput {
+    width: 100%;
+    height: 46px;
+    padding: 0 14px 0 40px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #202124;
+    border: 2px solid #dadce0;
+    border-radius: 8px;
+    outline: none;
+    background: #ffffff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.cashInput:focus {
+    border-color: #1e8e3e;
+    box-shadow: 0 0 0 3px rgba(30, 142, 62, 0.15);
+}
+
+.cashInputError {
+    border-color: #d93025 !important;
+}
+
+.cashInputError:focus {
+    box-shadow: 0 0 0 3px rgba(217, 48, 37, 0.15) !important;
+}
+
+/* Botones Rápidos de Billetes */
+.quickBillsContainer {
+    margin-bottom: 12px;
+}
+
+.quickBillsTitle {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #70757a;
+    margin-bottom: 6px;
+}
+
+.quickBillsGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.quickBillBtn {
+    flex: 1 1 auto;
+    min-width: 54px;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #3c4043;
+    background: #f1f3f4;
+    border: 1px solid #dadce0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+}
+
+.quickBillBtn:hover {
+    background: #e8f0fe;
+    border-color: #1a73e8;
+    color: #1a73e8;
+    transform: translateY(-1px);
+}
+
+.quickBillBtnActive {
+    background: #e6f4ea !important;
+    border-color: #1e8e3e !important;
+    color: #1e8e3e !important;
+    font-weight: 700;
+}
+
+.exactBtn {
+    background: #e8f0fe;
+    color: #1a73e8;
+    border-color: #aecbfa;
+    font-weight: 600;
+}
+
+.exactBtn:hover {
+    background: #d2e3fc;
+    border-color: #1a73e8;
+}
+
+/* Alerta de Monto Insuficiente */
+.insufficientAlert {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fce8e6;
+    color: #c5221f;
+    border: 1px solid #fad2cf;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    animation: shake 0.2s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
+}
+
+/* Tarjeta de Cambio / Vuelto */
+.changeCard {
+    background: #e6f4ea;
+    border: 1px solid #ceead6;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.changeCardExact {
+    background: #f1f3f4;
+    border-color: #dadce0;
+}
+
+.changeLabel {
+    display: flex;
+    flex-direction: column;
+}
+
+.changeLabelTitle {
+    font-size: 13px;
+    font-weight: 600;
+    color: #137333;
+}
+
+.changeLabelSub {
+    font-size: 11px;
+    color: #5f6368;
+}
+
+.changeAmount {
+    font-size: 20px;
+    font-weight: 800;
+    color: #137333;
+}
+
+.changeAmountExact {
+    color: #5f6368;
+    font-size: 16px;
+}
+
+/* Opción de Imprimir Ticket */
+.ticketCheckboxRow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: #202124;
+    user-select: none;
+    cursor: pointer;
+}
+
+.ticketCheckbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #1a73e8;
+}
+
+.promptText {
+    margin: 0;
+    color: #5f6368;
+    font-size: 13px;
+}
+
+/* Footer / Botones */
+.modalFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid #f1f3f4;
+    background: #ffffff;
+}
+
+.cancelBtn {
+    padding: 10px 18px;
+    background: #ffffff;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #3c4043;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.cancelBtn:hover {
+    background: #f8f9fa;
+    border-color: #c6c9cc;
+}
+
+.confirmBtn {
+    padding: 10px 22px;
+    background: #1a73e8;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 1px 3px rgba(26, 115, 232, 0.3);
+    transition: background 0.15s, transform 0.1s, opacity 0.15s;
+}
+
+.confirmBtn:hover:not(:disabled) {
+    background: #1557b0;
+    transform: translateY(-1px);
+}
+
+.confirmBtn:disabled {
+    background: #dadce0;
+    color: #80868b;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}

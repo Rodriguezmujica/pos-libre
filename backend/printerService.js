@@ -102,10 +102,35 @@ class PrinterService {
                     encoder.bold(true);
                     encoder.text(`TOTAL: ${formatMoney(data.total || 0)}`).newline();
                     encoder.bold(false);
+
+                    // Desglose de Efectivo y Cambio si aplica
+                    const amountPaid = data.amount_paid !== undefined ? data.amount_paid : data.amountPaid;
+                    const changeAmount = data.change_amount !== undefined ? data.change_amount : data.changeAmount;
+                    if (amountPaid !== undefined && amountPaid !== null && Number(amountPaid) > 0) {
+                        encoder.text(`Entregado: ${formatMoney(amountPaid)}`).newline();
+                        if (changeAmount !== undefined && changeAmount !== null) {
+                            encoder.text(`Cambio:    ${formatMoney(changeAmount)}`).newline();
+                        }
+                    }
                 } else {
                     // Fallback
                     encoder.text(`Ticket: ${data.ticket_id}`).newline();
                     encoder.text('--------------------------------').newline();
+                    if (data.total !== undefined) {
+                        encoder.align('right');
+                        encoder.bold(true);
+                        encoder.text(`TOTAL: ${formatMoney(data.total || 0)}`).newline();
+                        encoder.bold(false);
+                    }
+                    const amountPaid = data.amount_paid !== undefined ? data.amount_paid : data.amountPaid;
+                    const changeAmount = data.change_amount !== undefined ? data.change_amount : data.changeAmount;
+                    if (amountPaid !== undefined && amountPaid !== null && Number(amountPaid) > 0) {
+                        encoder.align('right');
+                        encoder.text(`Entregado: ${formatMoney(amountPaid)}`).newline();
+                        if (changeAmount !== undefined && changeAmount !== null) {
+                            encoder.text(`Cambio:    ${formatMoney(changeAmount)}`).newline();
+                        }
+                    }
                 }
 
                 // Barcode / Patent - REMOVED per user request

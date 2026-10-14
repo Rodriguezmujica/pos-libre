@@ -2,9 +2,10 @@
     display: flex;
     flex-direction: column;
     flex: 1;
-    /* Take remaining space */
+    min-height: 0;
+    /* Take remaining space without expanding container */
     background-color: transparent;
-    margin-top: var(--spacing-md);
+    margin-top: 4px;
 }
 
 .header {
@@ -17,6 +18,7 @@
     border-top-left-radius: var(--radius-lg);
     border-top-right-radius: var(--radius-lg);
     border-bottom: 1px solid #d2e3fc;
+    flex-shrink: 0;
 }
 
 .headerIcon {
@@ -39,6 +41,7 @@
     border-bottom-right-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
     flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -52,11 +55,30 @@
     font-weight: var(--font-weight-bold);
     color: #9aa0a6;
     text-transform: uppercase;
+    flex-shrink: 0;
 }
 
 .itemsContainer {
     overflow-y: auto;
     flex: 1;
+    min-height: 0;
+}
+
+.itemsContainer::-webkit-scrollbar {
+    width: 6px;
+}
+
+.itemsContainer::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.itemsContainer::-webkit-scrollbar-thumb {
+    background: #dadce0;
+    border-radius: 3px;
+}
+
+.itemsContainer::-webkit-scrollbar-thumb:hover {
+    background: #bdc1c6;
 }
 
 .colProduct {
@@ -238,3 +260,67 @@
         justify-content: center;
     }
 }
+
+/* Optimización para laptops / pantallas de menor altura */
+@media (max-height: 800px) {
+    .container {
+        margin-top: 0;
+    }
+
+    .header {
+        padding: 5px 12px;
+    }
+
+    .title {
+        font-size: 0.75rem;
+    }
+
+    .tableHeader {
+        padding: 6px 12px;
+        font-size: 0.65rem;
+    }
+
+    .cartItem {
+        padding: 6px 12px;
+    }
+
+    .productName {
+        font-size: 0.82rem;
+    }
+
+    .colPrice,
+    .colSubtotal {
+        font-size: 0.82rem;
+    }
+
+    .qtyControl {
+        height: 28px;
+    }
+
+    .qtyBtn {
+        padding: 0 6px;
+    }
+
+    .qtyValue {
+        padding: 0 4px;
+        font-size: 0.8rem;
+    }
+
+    .deleteBtn {
+        padding: 2px;
+    }
+}
+
+@media (max-height: 680px) {
+    .header {
+        padding: 4px 8px;
+    }
+
+    .tableHeader {
+        padding: 4px 8px;
+    }
+
+    .cartItem {
+        padding: 4px 8px;
+    }
+}

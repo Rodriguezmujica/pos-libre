@@ -2,7 +2,8 @@
     background-color: transparent;
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
+    flex-shrink: 0;
 }
 
 .searchBar {
@@ -74,8 +75,8 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    max-height: 25vh;
-    /* Reduced to 25vh to give even more space to Cart */
+    max-height: clamp(120px, 22vh, 200px);
+    min-height: 0;
 }
 
 .tableHeader {
@@ -150,6 +151,24 @@
     flex-direction: column;
     overflow-y: auto;
     flex: 1;
+    min-height: 0;
+}
+
+.listItems::-webkit-scrollbar {
+    width: 6px;
+}
+
+.listItems::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.listItems::-webkit-scrollbar-thumb {
+    background: #dadce0;
+    border-radius: 3px;
+}
+
+.listItems::-webkit-scrollbar-thumb:hover {
+    background: #bdc1c6;
 }
 
 .productRow {
@@ -292,3 +311,48 @@
         /* Tap huge card to add */
     }
 }
+
+/* Optimización para laptops / pantallas de menor altura */
+@media (max-height: 800px) {
+    .container {
+        gap: 6px;
+    }
+
+    .searchBar {
+        padding: 8px 12px;
+        gap: 8px;
+        border-radius: 8px;
+    }
+
+    .tableHeader {
+        padding: 6px 12px;
+        font-size: 0.7rem;
+    }
+
+    .productRow {
+        padding: 6px 12px;
+    }
+
+    .productName {
+        font-size: 0.82rem;
+    }
+
+    .productList {
+        max-height: clamp(100px, 20vh, 160px);
+        border-radius: 8px;
+    }
+}
+
+@media (max-height: 680px) {
+    .productList {
+        max-height: clamp(80px, 16vh, 130px);
+    }
+
+    .productRow {
+        padding: 4px 10px;
+    }
+
+    .searchBar {
+        padding: 6px 10px;
+    }
+}

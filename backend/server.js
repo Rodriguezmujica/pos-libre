@@ -222,7 +222,15 @@ app.delete('/api/products/:id', (req, res) => {
 // SALES
 // SALES
 app.post('/api/sales', (req, res) => {
-    const { date, total, payment_method, cashier, items } = req.body;
+    const { date, total, payment_method, cashier, items, amount_paid, change_amount, amountPaid, changeAmount } = req.body;
+
+    const finalAmountPaid = (amountPaid !== undefined && amountPaid !== null)
+        ? Number(amountPaid)
+        : (amount_paid !== undefined && amount_paid !== null ? Number(amount_paid) : Number(total) || 0);
+
+    const finalChangeAmount = (changeAmount !== undefined && changeAmount !== null)
+        ? Number(changeAmount)
+        : (change_amount !== undefined && change_amount !== null ? Number(change_amount) : 0);
 
     // Start Transaction
     console.log("Creating sale with items:", JSON.stringify(items.map(i => ({ id: i.id, name: i.name }))));
@@ -240,14 +248,30 @@ app.post('/api/sales', (req, res) => {
             let nextId = (row && row.maxId) ? row.maxId + 1 : 1;
             const id = String(nextId).padStart(5, '0'); // "00001"
 
-            const insertSale = 'INSERT INTO sales (id, date, total, payment_method, cashier) VALUES (?,?,?,?,?)';
-            db.run(insertSale, [id, date, total, payment_method, cashier], function (err) {
+            const insertSale = 'INSERT INTO sales (id, date, total, payment_method, cashier, amount_paid, change_amount) VALUES (?,?,?,?,?,?,?)';
+            db.run(insertSale, [id, date, total, payment_method, cashier, finalAmountPaid, finalChangeAmount], function (err) {
                 if (err) {
+                    // Fallback si la base de datos aún no tiene columnas amount_paid / change_amount
+                    if (err.message && err.message.includes('has no column named')) {
+                        const fallbackInsert = 'INSERT INTO sales (id, date, total, payment_method, cashier) VALUES (?,?,?,?,?)';
+                        return db.run(fallbackInsert, [id, date, total, payment_method, cashier], function (fallbackErr) {
+                            if (fallbackErr) {
+                                console.error("Error inserting sale:", fallbackErr);
+                                db.run('ROLLBACK');
+                                return res.status(500).json({ error: fallbackErr.message });
+                            }
+                            proceedWithItems();
+                        });
+                    }
                     console.error("Error inserting sale:", err);
                     db.run('ROLLBACK');
                     return res.status(500).json({ error: err.message });
                 }
 
+                proceedWithItems();
+            });
+
+            function proceedWithItems() {
                 // Logic to update stock depends on if it's a variant or main product
                 const updateMainStock = 'UPDATE products SET stock = stock - ? WHERE id = ?';
                 const getProductVariants = 'SELECT variants FROM products WHERE id = ?';
@@ -331,7 +355,7 @@ app.post('/api/sales', (req, res) => {
                 };
 
                 processItems();
-            });
+            }
         });
     });
 });
@@ -739,7 +763,7 @@ app.post('/api/print/ticket', authenticateToken, async (req, res) => {
     // Si envían saleId, buscamos la venta en BD
     if (saleId) {
         const query = `
-            SELECT s.id, s.date, s.total, s.payment_method, s.cashier,
+            SELECT s.*,
                    si.quantity, si.price, si.product_name, p.name as catalog_name
             FROM sales s
             LEFT JOIN sale_items si ON s.id = si.sale_id
@@ -769,6 +793,9 @@ app.post('/api/print/ticket', authenticateToken, async (req, res) => {
                 ticket_id: sale.ticket_id,
                 fecha_ingreso: sale.fecha_ingreso,
                 hora_ingreso: sale.hora_ingreso,
+                payment_method: rows[0].payment_method,
+                amount_paid: (data && data.amountPaid !== undefined) ? data.amountPaid : rows[0].amount_paid,
+                change_amount: (data && data.changeAmount !== undefined) ? data.changeAmount : rows[0].change_amount,
                 items: sale.items,
                 total: sale.total,
                 tipo_vehiculo: 'Cliente General',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check, DollarSign, Type } from 'lucide-react';
+import { X, Check, Euro, Type } from 'lucide-react';
 
 const CustomItemModal = ({ isOpen, onClose, onConfirm }) => {
     const [description, setDescription] = useState('');
@@ -18,13 +18,16 @@ const CustomItemModal = ({ isOpen, onClose, onConfirm }) => {
             return;
         }
 
-        const priceNum = parseFloat(price);
-        if (isNaN(priceNum) || priceNum < 0) {
-            setError('El precio debe ser un número válido');
+        const normalizedPrice = typeof price === 'string' ? price.trim().replace(',', '.') : String(price);
+        const priceNum = parseFloat(normalizedPrice);
+        if (isNaN(priceNum) || priceNum < 0.01) {
+            setError('El precio debe ser un número válido mayor o igual a 0.01 €');
             return;
         }
 
-        const qtyNum = parseInt(quantity);
+        const roundedPrice = Math.round(priceNum * 100) / 100;
+
+        const qtyNum = parseInt(quantity, 10);
         if (isNaN(qtyNum) || qtyNum < 1) {
             setError('La cantidad debe ser al menos 1');
             return;
@@ -32,7 +35,7 @@ const CustomItemModal = ({ isOpen, onClose, onConfirm }) => {
 
         onConfirm({
             description: description.trim(),
-            price: priceNum,
+            price: roundedPrice,
             quantity: qtyNum
         });
 
@@ -123,19 +126,19 @@ const CustomItemModal = ({ isOpen, onClose, onConfirm }) => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
-                                Precio
+                                Precio (€)
                             </label>
                             <div style={{ position: 'relative' }}>
                                 <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}>
-                                    <DollarSign size={16} />
+                                    <Euro size={16} />
                                 </div>
                                 <input
                                     type="number"
                                     value={price}
                                     onChange={(e) => setPrice(e.target.value)}
-                                    placeholder="0"
-                                    min="0"
-                                    step="1"
+                                    placeholder="0.00"
+                                    min="0.01"
+                                    step="0.01"
                                     style={{
                                         width: '100%',
                                         padding: '10px 10px 10px 36px',

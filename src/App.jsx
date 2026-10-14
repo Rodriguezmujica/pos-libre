@@ -190,9 +190,9 @@ function AppContent() {
     }
   };
 
-  const handleExecuteSaleWrapper = async (printTicket) => {
+  const handleExecuteSaleWrapper = async (printTicket, paymentDetails) => {
     try {
-      await transactionHook.executeSale(settings, printTicket);
+      await transactionHook.executeSale(settings, printTicket, paymentDetails);
       // Success message handled by effect below
     } catch (err) {
       if (!transactionHook.transactionState.error) {
@@ -245,7 +245,7 @@ function AppContent() {
 
   if (currentView === 'REPORT') {
     return (
-      <div style={{ height: '100vh', background: '#f8f9fa' }}>
+      <div style={{ height: '100vh', overflowY: 'auto', background: '#f8f9fa' }}>
         <DailyReportPage
           onBack={() => setCurrentView('POS')}
           sales={sales}

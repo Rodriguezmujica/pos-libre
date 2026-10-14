@@ -40,21 +40,38 @@ export function useTransaction(cart, cashRegister, user, refreshInventory, sales
         }));
     };
 
-    const executeSale = async (settings, printTicket = true) => {
+    const executeSale = async (settings, printTicket = true, paymentDetails = {}) => {
         setTransactionState(prev => ({ ...prev, loading: true, isConfirmationOpen: false, error: null }));
 
         try {
+            const method = transactionState.pendingPaymentMethod;
+            const isCash = method === 'cash';
+
+            const amountPaid = isCash
+                ? (paymentDetails?.amountPaid !== undefined && paymentDetails?.amountPaid !== null
+                    ? Number(paymentDetails.amountPaid)
+                    : cart.total)
+                : cart.total;
+
+            const changeAmount = isCash
+                ? (paymentDetails?.changeAmount !== undefined && paymentDetails?.changeAmount !== null
+                    ? Number(paymentDetails.changeAmount)
+                    : Math.max(0, Math.round((amountPaid - cart.total) * 100) / 100))
+                : 0;
+
             const { result } = await createSale({
                 cartItems: cart.cartItems,
                 total: cart.total,
-                paymentMethod: transactionState.pendingPaymentMethod,
+                paymentMethod: method,
+                amountPaid,
+                changeAmount,
                 user,
                 note: ''
             });
 
-            // Update cash register totals
+            // Update cash register totals (suma únicamente el total real de la venta)
             if (cashRegister.updateSessionTotals) {
-                cashRegister.updateSessionTotals(transactionState.pendingPaymentMethod, cart.total);
+                cashRegister.updateSessionTotals(method, cart.total);
             }
 
             await refreshInventory();
@@ -63,10 +80,11 @@ export function useTransaction(cart, cashRegister, user, refreshInventory, sales
             // Auto-Print Ticket
             if (printTicket) {
                 try {
-                    // We use non-blocking print request to not delay UI feedback too much, 
-                    // but usually better to await slightly or fire and forget.
-                    // Fire and forget:
-                    api.printTicket(result.saleId).catch(err => console.error("Auto-print error:", err));
+                    api.printTicket(result.saleId, {
+                        amountPaid,
+                        changeAmount,
+                        paymentMethod: method
+                    }).catch(err => console.error("Auto-print error:", err));
                 } catch (printErr) {
                     console.warn("Could not initiate print:", printErr);
                 }
@@ -75,7 +93,12 @@ export function useTransaction(cart, cashRegister, user, refreshInventory, sales
             const ticketFooter = settings?.ticket?.footerText || '';
             const fantasyName = settings?.company?.fantasyName || settings?.company?.name || '';
 
-            const successMsg = `Venta completada con éxito!\nID: ${result.saleId}\nTotal: ${formatMoney(cart.total)}\n\n(Ticket enviado a impreso)\n\n--- TICKET ---\n${fantasyName}\n${ticketFooter}`;
+            let cashBreakdown = '';
+            if (isCash && amountPaid > cart.total) {
+                cashBreakdown = `\nEntregado: ${formatMoney(amountPaid)}\nCambio: ${formatMoney(changeAmount)}`;
+            }
+
+            const successMsg = `Venta completada con éxito!\nID: ${result.saleId}\nTotal: ${formatMoney(cart.total)}${cashBreakdown}\n\n(Ticket enviado a impreso)\n\n--- TICKET ---\n${fantasyName}\n${ticketFooter}`;
 
             setTransactionState(prev => ({
                 ...prev,
